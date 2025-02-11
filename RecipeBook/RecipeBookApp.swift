@@ -6,10 +6,15 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct RecipeBookApp: App {
     let persistenceController = PersistenceController.shared
+
+    init() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
 
     var body: some Scene {
         WindowGroup {

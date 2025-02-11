@@ -27,14 +27,15 @@ struct EditRecipeView: View {
         }
         
         // Convert existing recipe ingredients to selected ingredients
-        let recipeIngredients = recipe.recipeIngredientsArray
-        _selectedIngredients = State(initialValue: recipeIngredients.map { ri in
-            SelectedIngredient(
+        let initialIngredients = recipe.recipeIngredientsArray.map { ri -> SelectedIngredient in
+            let unit = UnitOfMeasure(rawValue: ri.unit ?? "") ?? .grams
+            return SelectedIngredient(
                 ingredient: ri.ingredient!,
                 quantity: ri.quantity,
-                unit: UnitOfMeasure(rawValue: ri.unit ?? "") ?? .grams
+                unit: unit
             )
-        })
+        }
+        _selectedIngredients = State(initialValue: initialIngredients)
         
         // Convert existing steps to RecipeStep
         if let existingSteps = recipe.steps as? Set<Step> {

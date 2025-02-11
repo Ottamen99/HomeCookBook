@@ -1,6 +1,8 @@
 import SwiftUI
+import UserNotifications
 
 struct StepTimelineView: View {
+    let recipe: Recipe
     let step: Step
     let isCompleted: Bool
     let isActive: Bool
@@ -41,6 +43,17 @@ struct StepTimelineView: View {
             return .blue
         } else {
             return .clear
+        }
+    }
+    
+    private var timerButton: some View {
+        let instructions = step.instructions ?? ""
+        
+        return Group {
+            if let duration = StepDuration.detect(in: instructions) {
+                StepTimerView(duration: duration)
+                    .padding(.top, 4)
+            }
         }
     }
     
@@ -117,19 +130,7 @@ struct StepTimelineView: View {
                         .cornerRadius(4)
                 }
                 
-                if let duration = StepDuration.detect(in: step.instructions ?? "") {
-                    Button {
-                        startNativeTimer(duration: duration)
-                    } label: {
-                        Label("\(duration.formattedString) timer", systemImage: "timer")
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 4)
-                }
+                timerButton
             }
             .padding(.bottom, 16)
             .contentShape(Rectangle())
@@ -138,26 +139,96 @@ struct StepTimelineView: View {
                     onToggleComplete(!isCompleted)
                 }
             }
+            .onAppear {
+                #if DEBUG
+                if StepDuration.detect(in: step.instructions ?? "") == nil {
+                    print("No duration detected in step \(step.order + 1): \(step.instructions ?? "")")
+                }
+                #endif
+            }
         }
         .background(isActive && canComplete ? Color.blue.opacity(0.05) : Color.clear)
         .cornerRadius(8)
     }
+}
+
+struct StepTimerView: View {
+    let duration: StepDuration
+    @State private var timeRemaining: TimeInterval
+    @State private var isRunning = false
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
-    private func startNativeTimer(duration: StepDuration) {
-        var components = URLComponents()
-        components.scheme = "x-apple-timer"
-        components.queryItems = [
-            URLQueryItem(name: "minutes", value: String(duration.totalSeconds / 60))
-        ]
-        
-        if let url = components.url {
-            UIApplication.shared.open(url) { success in
-                if !success {
-                    if let clockURL = URL(string: "clock:") {
-                        UIApplication.shared.open(clockURL)
-                    }
+    init(duration: StepDuration) {
+        self.duration = duration
+        _timeRemaining = State(initialValue: TimeInterval(duration.totalSeconds))
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Button {
+                isRunning.toggle()
+            } label: {
+                HStack {
+                    Image(systemName: isRunning ? "pause.fill" : "play.fill")
+                        .foregroundColor(timeRemaining > 0 ? .blue : .green)
+                    
+                    Text(formatTime(timeRemaining))
+                        .monospacedDigit()
+                        .foregroundColor(timeRemaining > 0 ? .blue : .green)
+                        .fontWeight(.medium)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+            }
+            .disabled(timeRemaining <= 0)
+            
+            if timeRemaining < TimeInterval(duration.totalSeconds) {
+                Button {
+                    timeRemaining = TimeInterval(duration.totalSeconds)
+                    isRunning = false
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .foregroundColor(.blue)
+                        .padding(8)
+                        .background(Color.blue.opacity(0.1))
+                        .clipShape(Circle())
                 }
             }
         }
+        .onReceive(timer) { _ in
+            guard isRunning else { return }
+            if timeRemaining > 0 {
+                timeRemaining -= 1
+                if timeRemaining == 0 {
+                    notifyTimerComplete()
+                }
+            }
+        }
+    }
+    
+    private func formatTime(_ timeInterval: TimeInterval) -> String {
+        if timeInterval <= 0 {
+            return "Done!"
+        }
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func notifyTimerComplete() {
+        let content = UNMutableNotificationContent()
+        content.title = "Timer Complete"
+        content.body = "The timer for \(duration.formattedString) has finished"
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        
+        UNUserNotificationCenter.current().add(request)
     }
 } 

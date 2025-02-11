@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct StepsSection: View {
+    let recipe: Recipe
     let steps: [Step]
     let completedSteps: Set<Int>
     let currentStepIndex: Int
@@ -18,6 +19,7 @@ struct StepsSection: View {
         VStack(spacing: 0) {
             ForEach(steps) { step in
                 StepTimelineView(
+                    recipe: recipe,
                     step: step,
                     isCompleted: completedSteps.contains(Int(step.order)),
                     isActive: currentStepIndex == step.order,

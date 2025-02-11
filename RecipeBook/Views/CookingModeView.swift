@@ -42,6 +42,7 @@ struct CookingModeView: View {
                 
                 // Steps timeline
                 StepsSection(
+                    recipe: recipe,
                     steps: recipe.stepsArray,
                     completedSteps: completedSteps,
                     currentStepIndex: currentStepIndex,

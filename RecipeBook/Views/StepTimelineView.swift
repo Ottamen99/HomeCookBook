@@ -1,7 +1,10 @@
 import SwiftUI
 import UserNotifications
+import ActivityKit
+import RecipeBookKit
 
-struct StepTimelineView: View {
+// Make the view public
+public struct StepTimelineView: View {
     let recipe: Recipe
     let step: Step
     let isCompleted: Bool
@@ -9,55 +12,20 @@ struct StepTimelineView: View {
     let isFirst: Bool
     let isLast: Bool
     let onToggleComplete: (Bool) -> Void
-    
     let canComplete: Bool
-    
-    private var timelineColor: Color {
-        isCompleted ? .green : (isActive ? .blue : .gray)
-    }
-    
-    private var circleStrokeColor: Color {
-        if !canComplete && !isCompleted {
-            return .gray.opacity(0.3)
-        }
-        return isCompleted ? .green : (isActive ? .blue : .gray)
-    }
-    
-    private var circleFillColor: Color {
-        if isCompleted {
-            return .green
-        } else if isActive && canComplete {
-            return .blue.opacity(0.1)
-        } else {
-            return .white
-        }
-    }
-    
-    private var shadowColor: Color {
-        if !canComplete && !isCompleted {
-            return .clear
-        }
-        if isCompleted {
-            return .green
-        } else if isActive {
-            return .blue
-        } else {
-            return .clear
-        }
-    }
     
     private var timerButton: some View {
         let instructions = step.instructions ?? ""
         
         return Group {
             if let duration = StepDuration.detect(in: instructions) {
-                StepTimerView(duration: duration)
+                StepTimerView(recipe: recipe, step: step, duration: duration)
                     .padding(.top, 4)
             }
         }
     }
     
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .top, spacing: 16) {
             // Timeline
             VStack(spacing: 0) {
@@ -69,8 +37,8 @@ struct StepTimelineView: View {
                 }
                 
                 Circle()
-                    .stroke(circleStrokeColor, lineWidth: 2)
-                    .background(Circle().fill(circleFillColor))
+                    .stroke(isCompleted ? .green : (isActive ? .blue : .gray), lineWidth: 2)
+                    .background(Circle().fill(isCompleted ? .green : (isActive ? .blue : .gray)))
                     .frame(width: 24, height: 24)
                     .overlay {
                         if isCompleted {
@@ -83,7 +51,7 @@ struct StepTimelineView: View {
                                 .frame(width: 8, height: 8)
                         }
                     }
-                    .shadow(color: shadowColor.opacity(0.3), radius: 4)
+                    .shadow(color: .clear, radius: 4)
                 
                 if !isLast {
                     Rectangle()
@@ -152,13 +120,19 @@ struct StepTimelineView: View {
     }
 }
 
-struct StepTimerView: View {
+private struct StepTimerView: View {
+    let recipe: Recipe
+    let step: Step
     let duration: StepDuration
+    
     @State private var timeRemaining: TimeInterval
     @State private var isRunning = false
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @State private var activity: Activity<TimerActivityAttributes>?
+    let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
     
-    init(duration: StepDuration) {
+    init(recipe: Recipe, step: Step, duration: StepDuration) {
+        self.recipe = recipe
+        self.step = step
         self.duration = duration
         _timeRemaining = State(initialValue: TimeInterval(duration.totalSeconds))
     }
@@ -166,7 +140,11 @@ struct StepTimerView: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                isRunning.toggle()
+                if isRunning {
+                    pauseTimer()
+                } else {
+                    startTimer()
+                }
             } label: {
                 HStack {
                     Image(systemName: isRunning ? "pause.fill" : "play.fill")
@@ -186,8 +164,7 @@ struct StepTimerView: View {
             
             if timeRemaining < TimeInterval(duration.totalSeconds) {
                 Button {
-                    timeRemaining = TimeInterval(duration.totalSeconds)
-                    isRunning = false
+                    resetTimer()
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                         .foregroundColor(.blue)
@@ -200,11 +177,100 @@ struct StepTimerView: View {
         .onReceive(timer) { _ in
             guard isRunning else { return }
             if timeRemaining > 0 {
-                timeRemaining -= 1
-                if timeRemaining == 0 {
+                timeRemaining -= 0.1
+                updateLiveActivity()
+                
+                if timeRemaining <= 0 {
+                    stopTimer()
                     notifyTimerComplete()
                 }
             }
+        }
+        .onDisappear {
+            stopTimer()
+        }
+    }
+    
+    private func startTimer() {
+        isRunning = true
+        startLiveActivity()
+    }
+    
+    private func pauseTimer() {
+        isRunning = false
+        updateLiveActivity()
+    }
+    
+    private func stopTimer() {
+        isRunning = false
+        endLiveActivity()
+    }
+    
+    private func resetTimer() {
+        stopTimer()
+        timeRemaining = TimeInterval(duration.totalSeconds)
+    }
+    
+    private func startLiveActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        
+        let attributes = TimerActivityAttributes(
+            recipeName: recipe.name ?? "",
+            stepNumber: Int(step.order),
+            stepDescription: step.instructions ?? "",
+            duration: TimeInterval(duration.totalSeconds)
+        )
+        
+        let initialContent = ActivityContent(
+            state: TimerActivityAttributes.ContentState(
+                endTime: Date().addingTimeInterval(timeRemaining),
+                progress: 1 - (timeRemaining / TimeInterval(duration.totalSeconds)),
+                isPaused: false
+            ),
+            staleDate: Calendar.current.date(byAdding: .hour, value: 1, to: Date())
+        )
+        
+        Task {
+            do {
+                activity = try await Activity.request(
+                    attributes: attributes,
+                    content: initialContent
+                )
+            } catch {
+                print("Error starting live activity: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func updateLiveActivity() {
+        Task {
+            let content = ActivityContent(
+                state: TimerActivityAttributes.ContentState(
+                    endTime: Date().addingTimeInterval(timeRemaining),
+                    progress: 1 - (timeRemaining / TimeInterval(duration.totalSeconds)),
+                    isPaused: !isRunning
+                ),
+                staleDate: Calendar.current.date(byAdding: .hour, value: 1, to: Date())
+            )
+            
+            await activity?.update(content)
+        }
+    }
+    
+    private func endLiveActivity() {
+        Task {
+            await activity?.end(
+                ActivityContent(
+                    state: TimerActivityAttributes.ContentState(
+                        endTime: Date(),
+                        progress: 1.0,
+                        isPaused: false
+                    ),
+                    staleDate: nil
+                ),
+                dismissalPolicy: .immediate
+            )
+            activity = nil
         }
     }
     

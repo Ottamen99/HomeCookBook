@@ -2,8 +2,8 @@ import SwiftUI
 
 struct CookingModeView: View {
     let recipe: Recipe
-    @State private var completedSteps: Set<Int> = []
-    @State private var currentStepIndex: Int = 0
+    @State private var completedSteps = Set<Int>()
+    @State private var currentStepIndex = 0
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
@@ -43,7 +43,6 @@ struct CookingModeView: View {
                 // Steps timeline
                 StepsSection(
                     recipe: recipe,
-                    steps: recipe.stepsArray,
                     completedSteps: completedSteps,
                     currentStepIndex: currentStepIndex,
                     onStepComplete: handleStepComplete,

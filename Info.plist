@@ -14,5 +14,11 @@
         <key>UISceneConfigurations</key>
         <dict/>
     </dict>
+    <dict>
+  <key>NSSupportsLiveActivities</key>
+  <true/>
+  <key>NSSupportsLiveActivitiesFrequentUpdates</key>
+  <true/>
+</dict> 
 </dict>
 </plist> 

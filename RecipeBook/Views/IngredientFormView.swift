@@ -72,7 +72,6 @@ struct IngredientFormView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         save()
-                        dismiss()
                     }
                     .disabled(name.isEmpty)
                 }
@@ -88,16 +87,39 @@ struct IngredientFormView: View {
     }
     
     private func save() {
-        switch mode {
-        case .add:
-            let ingredient = Ingredient(context: viewContext)
-            ingredient.name = name
-            ingredient.desc = description
-        case .edit(let ingredient):
-            ingredient.name = name
-            ingredient.desc = description
+        viewContext.perform {
+            do {
+                switch mode {
+                case .add:
+                    let ingredient = Ingredient(context: viewContext)
+                    ingredient.name = name
+                    ingredient.desc = description
+                case .edit(let ingredient):
+                    ingredient.name = name
+                    ingredient.desc = description
+                    
+                    // Refresh related objects
+                    if let recipeIngredients = ingredient.recipeIngredients as? Set<RecipeIngredient> {
+                        for recipeIngredient in recipeIngredients {
+                            viewContext.refresh(recipeIngredient, mergeChanges: true)
+                            if let recipe = recipeIngredient.recipe {
+                                viewContext.refresh(recipe, mergeChanges: true)
+                            }
+                        }
+                    }
+                }
+                
+                try viewContext.save()
+                
+                // Refresh the entire view context
+                viewContext.refreshAllObjects()
+                
+                DispatchQueue.main.async {
+                    dismiss()
+                }
+            } catch {
+                print("Error saving ingredient: \(error)")
+            }
         }
-        
-        try? viewContext.save()
     }
 } 

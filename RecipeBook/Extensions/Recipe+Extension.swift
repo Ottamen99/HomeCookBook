@@ -9,6 +9,11 @@ extension Recipe {
     
     var stepsArray: [Step] {
         let set = steps as? Set<Step> ?? []
-        return Array(set).sorted { $0.order < $1.order }
+        return Array(set).sorted { 
+            if $0.order == $1.order {
+                return ($0.createdAt ?? Date()) < ($1.createdAt ?? Date())
+            }
+            return $0.order < $1.order
+        }
     }
 } 

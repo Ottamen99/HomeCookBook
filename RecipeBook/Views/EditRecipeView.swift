@@ -1,22 +1,5 @@
 import SwiftUI
 
-enum EditRecipeSheet: Identifiable {
-    case ingredients
-    case imagePicker
-    case step(StepSheet)
-    
-    var id: String {
-        switch self {
-        case .ingredients:
-            return "ingredients"
-        case .imagePicker:
-            return "imagePicker"
-        case .step(let stepSheet):
-            return "step-\(stepSheet.id)"
-        }
-    }
-}
-
 struct EditRecipeView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -234,72 +217,93 @@ struct EditRecipeView: View {
     }
     
     private func saveRecipe() {
-        // Save basic recipe details
-        recipe.name = name
-        recipe.desc = description
-        recipe.timeInMinutes = timeInMinutes
-        recipe.servings = servings
-        
-        // Save image data
-        if let image = image {
-            recipe.imageData = image.jpegData(compressionQuality: 0.8)
-        } else {
-            recipe.imageData = nil
-        }
-        
-        // First, create a dictionary of all recipe ingredients we'll need
-        var recipeIngredients: [String: RecipeIngredient] = [:]
-        
-        // Helper function to get or create a RecipeIngredient
-        func getOrCreateRecipeIngredient(for selected: SelectedIngredient) -> RecipeIngredient {
-            let key = "\(selected.ingredient.objectID)_\(selected.quantity)_\(selected.unit.rawValue)"
-            if let existing = recipeIngredients[key] {
-                return existing
+        viewContext.perform {
+            // Save basic recipe details
+            recipe.name = name
+            recipe.desc = description
+            recipe.timeInMinutes = timeInMinutes
+            recipe.servings = servings
+            
+            // Save image data
+            if let image = image {
+                recipe.imageData = image.jpegData(compressionQuality: 0.8)
+            } else {
+                recipe.imageData = nil
             }
             
-            let ri = RecipeIngredient(context: viewContext)
-            ri.recipe = recipe
-            ri.ingredient = selected.ingredient
-            ri.quantity = selected.quantity
-            ri.unit = selected.unit.rawValue
-            recipeIngredients[key] = ri
-            return ri
-        }
-        
-        // Remove all existing recipe ingredients
-        if let existingIngredients = recipe.recipeIngredients as? Set<RecipeIngredient> {
-            existingIngredients.forEach { viewContext.delete($0) }
-        }
-        
-        // Add new recipe ingredients from the ingredients list
-        for selected in selectedIngredients {
-            _ = getOrCreateRecipeIngredient(for: selected)
-        }
-        
-        // Remove all existing steps
-        if let existingSteps = recipe.steps as? Set<Step> {
-            existingSteps.forEach { viewContext.delete($0) }
-        }
-        
-        // Add new steps
-        for step in steps {
-            let newStep = Step(context: viewContext)
-            newStep.recipe = recipe
-            newStep.instructions = step.instructions
-            newStep.order = step.order
+            // First, create a dictionary of all recipe ingredients we'll need
+            var recipeIngredients: [String: RecipeIngredient] = [:]
             
-            // Link ingredients to step
-            for selectedIngredient in step.selectedIngredients {
-                let recipeIngredient = getOrCreateRecipeIngredient(for: selectedIngredient)
-                newStep.addToIngredients(recipeIngredient)
+            // Helper function to get or create a RecipeIngredient
+            func getOrCreateRecipeIngredient(for selected: SelectedIngredient) -> RecipeIngredient {
+                let key = "\(selected.ingredient.objectID)_\(selected.quantity)_\(selected.unit.rawValue)"
+                if let existing = recipeIngredients[key] {
+                    return existing
+                }
+                
+                let ri = RecipeIngredient(context: viewContext)
+                ri.recipe = recipe
+                ri.ingredient = selected.ingredient
+                ri.quantity = selected.quantity
+                ri.unit = selected.unit.rawValue
+                recipeIngredients[key] = ri
+                return ri
+            }
+            
+            // Remove all existing recipe ingredients
+            if let existingIngredients = recipe.recipeIngredients as? Set<RecipeIngredient> {
+                existingIngredients.forEach { viewContext.delete($0) }
+            }
+            
+            // Add new recipe ingredients from the ingredients list
+            for selected in selectedIngredients {
+                _ = getOrCreateRecipeIngredient(for: selected)
+            }
+            
+            // Remove all existing steps
+            if let existingSteps = recipe.steps as? Set<Step> {
+                existingSteps.forEach { viewContext.delete($0) }
+            }
+            
+            // Add new steps
+            for step in steps {
+                let newStep = Step(context: viewContext)
+                newStep.recipe = recipe
+                newStep.instructions = step.instructions
+                newStep.order = step.order
+                newStep.createdAt = Date()
+                
+                // Link ingredients to step
+                for selectedIngredient in step.selectedIngredients {
+                    let recipeIngredient = getOrCreateRecipeIngredient(for: selectedIngredient)
+                    newStep.addToIngredients(recipeIngredient)
+                }
+            }
+            
+            // Save all changes
+            do {
+                try viewContext.save()
+                viewContext.refresh(recipe, mergeChanges: true)
+            } catch {
+                print("Error saving recipe: \(error)")
             }
         }
-        
-        // Save all changes
-        do {
-            try viewContext.save()
-        } catch {
-            print("Error saving recipe: \(error)")
+    }
+}
+
+enum EditRecipeSheet: Identifiable {
+    case ingredients
+    case imagePicker
+    case step(StepSheet)
+    
+    var id: String {
+        switch self {
+        case .ingredients:
+            return "ingredients"
+        case .imagePicker:
+            return "imagePicker"
+        case .step(let stepSheet):
+            return "step-\(stepSheet.id)"
         }
     }
 } 

@@ -4,21 +4,52 @@ import CoreData
 struct RecipeDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
-    let recipe: Recipe
+    let recipe: Recipe  // Change back to let
     
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
     @State private var servings: Int16
     @State private var refreshID = UUID()
+    @State private var showingCookingMode = false
+    
+    // Add FetchRequest for ingredients
+    @FetchRequest private var ingredients: FetchedResults<RecipeIngredient>
+    
+    // Add this to observe Ingredient changes
+    @FetchRequest(
+        entity: Ingredient.entity(),
+        sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)]
+    ) private var allIngredients: FetchedResults<Ingredient>
     
     init(recipe: Recipe) {
         self.recipe = recipe
         _servings = State(initialValue: recipe.servings)
+        
+        // Initialize FetchRequest
+        let predicate = NSPredicate(format: "recipe == %@", recipe)
+        let sortDescriptors = [NSSortDescriptor(keyPath: \RecipeIngredient.ingredient?.name, ascending: true)]
+        
+        _ingredients = FetchRequest(
+            sortDescriptors: sortDescriptors,
+            predicate: predicate,
+            animation: .default
+        )
+        
+        // Initialize the allIngredients fetch request
+        _allIngredients = FetchRequest(
+            entity: Ingredient.entity(),
+            sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)],
+            animation: .default
+        )
+    }
+    
+    private var currentRecipe: Recipe {
+        recipe
     }
     
     private var recipeImage: some View {
         Group {
-            if let imageData = recipe.imageData,
+            if let imageData = currentRecipe.imageData,
                let uiImage = UIImage(data: imageData) {
                 Section {
                     Image(uiImage: uiImage)
@@ -37,7 +68,7 @@ struct RecipeDetailView: View {
         HStack {
             Image(systemName: "clock")
                 .foregroundColor(.blue)
-            Text("\(recipe.timeInMinutes) minutes")
+            Text("\(currentRecipe.timeInMinutes) minutes")
         }
     }
     
@@ -60,7 +91,7 @@ struct RecipeDetailView: View {
     
     private var recipeDescription: some View {
         Group {
-            if let description = recipe.desc, !description.isEmpty {
+            if let description = currentRecipe.desc, !description.isEmpty {
                 Section("Description") {
                     Text(description)
                         .lineSpacing(4)
@@ -70,7 +101,7 @@ struct RecipeDetailView: View {
     }
     
     private func ingredientView(for recipeIngredient: RecipeIngredient) -> some View {
-        let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
+        let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
         return HStack(spacing: 12) {
             Circle()
                 .fill(Color.blue.opacity(0.1))
@@ -82,8 +113,12 @@ struct RecipeDetailView: View {
                 }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(recipeIngredient.ingredient?.name ?? "")
-                    .font(.headline)
+                // Use Text view with ID to force refresh when ingredient name changes
+                if let ingredient = recipeIngredient.ingredient {
+                    Text(ingredient.name ?? "")
+                        .id("ingredient-\(ingredient.objectID)-\(ingredient.name ?? "")")
+                        .font(.headline)
+                }
                 Text(String(format: "%.2f %@", scaledQuantity, recipeIngredient.unit ?? ""))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -93,17 +128,35 @@ struct RecipeDetailView: View {
     
     private var ingredientsSection: some View {
         Section("Ingredients") {
-            ForEach(recipe.recipeIngredientsArray) { recipeIngredient in
+            ForEach(ingredients) { recipeIngredient in
                 ingredientView(for: recipeIngredient)
+                    .id("recipeIngredient-\(recipeIngredient.objectID)-\(recipeIngredient.ingredient?.name ?? "")")
             }
         }
     }
     
     private func stepView(for step: Step) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Step \(step.order + 1)")
-                .font(.headline)
-                .foregroundColor(.blue)
+            HStack {
+                Text("Step \(step.order + 1)")
+                    .font(.headline)
+                    .foregroundColor(.blue)
+                
+                Spacer()
+                
+                if let duration = StepDuration.detect(in: step.instructions ?? "") {
+                    Button {
+                        startNativeTimer(duration: duration)
+                    } label: {
+                        Label("Set \(duration.formattedString) timer", systemImage: "timer")
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+            }
             
             Text(step.instructions ?? "")
             
@@ -116,12 +169,33 @@ struct RecipeDetailView: View {
         .padding(.vertical, 4)
     }
     
+    private func startNativeTimer(duration: StepDuration) {
+        // Format the timer URL with components
+        var components = URLComponents()
+        components.scheme = "x-apple-timer"
+        components.queryItems = [
+            URLQueryItem(name: "minutes", value: String(duration.totalSeconds / 60))
+        ]
+        
+        if let url = components.url {
+            UIApplication.shared.open(url) { success in
+                if !success {
+                    // Fallback to Clock app if timer scheme fails
+                    if let clockURL = URL(string: "clock:") {
+                        UIApplication.shared.open(clockURL)
+                    }
+                }
+            }
+        }
+    }
+    
     private var stepsSection: some View {
         Group {
-            if !recipe.stepsArray.isEmpty {
+            if !currentRecipe.stepsArray.isEmpty {
                 Section("Instructions") {
-                    ForEach(recipe.stepsArray) { step in
+                    ForEach(currentRecipe.stepsArray) { step in
                         stepView(for: step)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -146,20 +220,33 @@ struct RecipeDetailView: View {
             deleteSection
         }
         .id(refreshID)
-        .navigationTitle(recipe.name ?? "Recipe Details")
+        .navigationTitle(currentRecipe.name ?? "Recipe Details")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingEditSheet = true
-                } label: {
-                    Text("Edit")
+                HStack {
+                    Button {
+                        showingCookingMode = true
+                    } label: {
+                        Image(systemName: "play.circle")
+                    }
+                    
+                    Button {
+                        showingEditSheet = true
+                    } label: {
+                        Text("Edit")
+                    }
                 }
             }
         }
         .sheet(isPresented: $showingEditSheet) {
             refreshID = UUID()
         } content: {
-            EditRecipeView(recipe: recipe)
+            EditRecipeView(recipe: currentRecipe)
+        }
+        .sheet(isPresented: $showingCookingMode) {
+            NavigationView {
+                CookingModeView(recipe: recipe)
+            }
         }
         .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) {}
@@ -172,7 +259,7 @@ struct RecipeDetailView: View {
     }
     
     private func deleteRecipe() {
-        viewContext.delete(recipe)
+        viewContext.delete(currentRecipe)
         try? viewContext.save()
         dismiss()
     }

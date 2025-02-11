@@ -1,80 +1,39 @@
 import SwiftUI
 
-enum StepSheet: Identifiable {
-    case add
-    case edit(RecipeStep)
-    
-    var id: String {
-        switch self {
-        case .add:
-            return "add"
-        case .edit(let step):
-            return "edit-\(step.id)"
-        }
-    }
-}
-
 struct StepsSection: View {
-    @Binding var steps: [RecipeStep]
-    let recipeIngredients: [SelectedIngredient]
-    @State private var activeSheet: StepSheet?
+    let steps: [Step]
+    let completedSteps: Set<Int>
+    let currentStepIndex: Int
+    let onStepComplete: (Step, Bool) -> Void
+    let onStepSelect: (Step) -> Void
+    
+    private func canCompleteStep(_ step: Step) -> Bool {
+        if step.order == 0 {
+            return true
+        }
+        return completedSteps.contains(Int(step.order - 1))
+    }
     
     var body: some View {
-        Section("Steps") {
-            ForEach($steps) { $step in
-                StepRowView(step: $step, recipeIngredients: recipeIngredients) {
-                    activeSheet = .edit(step)
-                }
-            }
-            .onMove { from, to in
-                steps.move(fromOffsets: from, toOffset: to)
-                updateStepOrder()
-            }
-            .onDelete { indexSet in
-                steps.remove(atOffsets: indexSet)
-                updateStepOrder()
-            }
-            
-            Button {
-                activeSheet = .add
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add Step")
+        VStack(spacing: 0) {
+            ForEach(steps) { step in
+                StepTimelineView(
+                    step: step,
+                    isCompleted: completedSteps.contains(Int(step.order)),
+                    isActive: currentStepIndex == step.order,
+                    isFirst: step.order == 0,
+                    isLast: step.order == steps.count - 1,
+                    onToggleComplete: { completed in
+                        onStepComplete(step, completed)
+                    },
+                    canComplete: canCompleteStep(step)
+                )
+                .onTapGesture {
+                    onStepSelect(step)
                 }
             }
         }
-        .sheet(item: $activeSheet) { sheet in
-            NavigationView {
-                switch sheet {
-                case .add:
-                    StepFormView(
-                        step: nil,
-                        recipeIngredients: recipeIngredients
-                    ) { newStep in
-                        steps.append(newStep)
-                        updateStepOrder()
-                        activeSheet = nil
-                    }
-                case .edit(let step):
-                    StepFormView(
-                        step: step,
-                        recipeIngredients: recipeIngredients
-                    ) { newStep in
-                        if let index = steps.firstIndex(where: { $0.id == step.id }) {
-                            steps[index] = newStep
-                        }
-                        updateStepOrder()
-                        activeSheet = nil
-                    }
-                }
-            }
-        }
-    }
-    
-    private func updateStepOrder() {
-        for (index, step) in steps.enumerated() {
-            steps[index].order = Int16(index)
-        }
+        .padding()
+        .backgroundStyle()
     }
 } 

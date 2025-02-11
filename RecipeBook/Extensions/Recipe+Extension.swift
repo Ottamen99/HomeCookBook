@@ -16,4 +16,12 @@ extension Recipe {
             return $0.order < $1.order
         }
     }
+    
+    static var defaultFetchRequest: NSFetchRequest<Recipe> {
+        let request = NSFetchRequest<Recipe>(entityName: "Recipe")
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \Recipe.name, ascending: true)
+        ]
+        return request
+    }
 } 

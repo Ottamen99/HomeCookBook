@@ -13,6 +13,7 @@
         <attribute name="desc" optional="YES" attributeType="String"/>
         <attribute name="name" attributeType="String"/>
         <relationship name="recipeIngredients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="RecipeIngredient" inverseName="ingredient" inverseEntity="RecipeIngredient"/>
+        <relationship name="pantryIngredients" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PantryIngredient" inverseName="ingredient" inverseEntity="PantryIngredient"/>
     </entity>
     <entity name="RecipeIngredient" representedClassName="RecipeIngredient" syncable="YES" codeGenerationType="class">
         <attribute name="quantity" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
@@ -27,6 +28,13 @@
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="ingredients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="RecipeIngredient" inverseName="steps" inverseEntity="RecipeIngredient"/>
         <relationship name="recipe" maxCount="1" deletionRule="Nullify" destinationEntity="Recipe" inverseName="steps" inverseEntity="Recipe"/>
+    </entity>
+    <entity name="PantryIngredient" representedClassName="PantryIngredient">
+        <attribute name="dateAdded" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="quantity" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="unit" optional="YES" attributeType="String"/>
+        <relationship name="ingredient" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Ingredient" inverseName="pantryIngredients" inverseEntity="Ingredient"/>
     </entity>
     <elements>
         <element name="Recipe" positionX="-63" positionY="-18" width="128" height="104"/>

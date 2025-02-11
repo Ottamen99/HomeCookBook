@@ -22,6 +22,11 @@ struct ContentView: View {
                 .tabItem {
                     Label("Recipes", systemImage: "book")
                 }
+
+            PantryView()
+                .tabItem {
+                    Label("My Pantry", systemImage: "basket.fill")
+                }
             
             IngredientsView()
                 .tabItem {

@@ -22,46 +22,198 @@ struct CookingModeView: View {
         return []
     }
     
+    private var cookingHeader: some View {
+        VStack(spacing: 24) {
+            // Progress circle
+            Circle()
+                .fill(Color.orange.opacity(0.1))
+                .frame(width: 250, height: 250)
+                .overlay {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 12)
+                            .frame(width: 200, height: 200)
+                        
+                        Circle()
+                            .trim(from: 0, to: progress)
+                            .stroke(Color.orange, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                            .frame(width: 200, height: 200)
+                            .rotationEffect(.degrees(-90))
+                        
+                        VStack(spacing: 4) {
+                            Text("\(Int(progress * 100))%")
+                                .font(.system(size: 44, weight: .bold, design: .rounded))
+                            Text("\(completedSteps.count) of \(recipe.stepsArray.count)")
+                                .font(.title3)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
+                .padding(.top, 40)
+            
+            Text(recipe.name ?? "")
+                .font(.title)
+                .fontWeight(.bold)
+        }
+    }
+    
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                // Progress section
-                ProgressSection(
-                    progress: progress,
-                    completedCount: completedSteps.count,
-                    totalCount: recipe.stepsArray.count
-                )
-                
-                // Current step ingredients
-                if !currentStepIngredients.isEmpty {
-                    CurrentIngredientsSection(ingredients: currentStepIngredients)
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        cookingHeader
+                        
+                        // Current step ingredients
+                        if !currentStepIngredients.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Current Step")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                
+                                ForEach(currentStepIngredients) { ingredient in
+                                    HStack {
+                                        Text(ingredient.ingredient?.name ?? "")
+                                            .font(.body)
+                                        
+                                        Spacer()
+                                        
+                                        Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "")")
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding(.vertical, 8)
+                                }
+                            }
+                            .padding()
+                        }
+                        
+                        // All ingredients
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("All Ingredients")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            ForEach(recipe.recipeIngredientsArray) { ingredient in
+                                HStack {
+                                    Text(ingredient.ingredient?.name ?? "")
+                                        .font(.body)
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "")")
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding()
+                        
+                        // Steps
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Steps")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+                            
+                            ForEach(recipe.stepsArray) { step in
+                                let isCompleted = completedSteps.contains(Int(step.order))
+                                let isCurrent = currentStepIndex == Int(step.order)
+                                
+                                Button {
+                                    handleStepSelect(step)
+                                } label: {
+                                    HStack(alignment: .top, spacing: 16) {
+                                        // Step number circle
+                                        Circle()
+                                            .fill(isCompleted ? Color.orange : (isCurrent ? Color.orange.opacity(0.2) : Color.gray.opacity(0.1)))
+                                            .frame(width: 36, height: 36)
+                                            .overlay {
+                                                if isCompleted {
+                                                    Image(systemName: "checkmark")
+                                                        .foregroundColor(.white)
+                                                } else {
+                                                    Text("\(Int(step.order) + 1)")
+                                                        .foregroundColor(isCurrent ? .orange : .gray)
+                                                }
+                                            }
+                                        
+                                        VStack(alignment: .leading, spacing: 12) {
+                                            Text(step.instructions ?? "")
+                                                .foregroundColor(isCurrent ? .primary : .secondary)
+                                                .multilineTextAlignment(.leading)
+                                            
+                                            if isCurrent {
+                                                Button {
+                                                    handleStepComplete(step, completed: !isCompleted)
+                                                } label: {
+                                                    HStack(spacing: 8) {
+                                                        Image(systemName: isCompleted ? "xmark.circle.fill" : "checkmark.circle.fill")
+                                                        Text(isCompleted ? "Mark Incomplete" : "Mark Complete")
+                                                            .fontWeight(.medium)
+                                                    }
+                                                    .foregroundColor(isCompleted ? .red : .orange)
+                                                    .padding(.vertical, 8)
+                                                    .padding(.horizontal, 16)
+                                                    .background(
+                                                        RoundedRectangle(cornerRadius: 20)
+                                                            .fill(isCompleted ? Color.red.opacity(0.1) : Color.orange.opacity(0.1))
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        
+                                        Spacer(minLength: 0)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(isCurrent ? Color.orange.opacity(0.05) : Color(.systemBackground))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(isCurrent ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 1)
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical)
+                        
+                        // Add padding at the bottom when button is visible
+                        if completedSteps.count == recipe.stepsArray.count {
+                            Color.clear.frame(height: 100) // Height for button + padding
+                        }
+                    }
                 }
                 
-                // All ingredients
-                AllIngredientsSection(ingredients: recipe.recipeIngredientsArray)
-                
-                // Steps timeline
-                StepsSection(
-                    recipe: recipe,
-                    completedSteps: completedSteps,
-                    currentStepIndex: currentStepIndex,
-                    onStepComplete: handleStepComplete,
-                    onStepSelect: handleStepSelect
-                )
-            }
-            .padding()
-        }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Cooking \(recipe.name ?? "")")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if completedSteps.count == recipe.stepsArray.count {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                // Completion button
+                if completedSteps.count == recipe.stepsArray.count {
                     Button {
                         dismiss()
                     } label: {
-                        Label("Finish", systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                        Text("Finish Cooking")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(12)
+                    }
+                    .padding()
+                    .background(
+                        Rectangle()
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
             }

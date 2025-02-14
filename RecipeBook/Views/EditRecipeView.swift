@@ -74,7 +74,7 @@ struct EditRecipeView: View {
                 } label: {
                     Image(systemName: "camera.circle.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(.white, Color.blue)
+                        .foregroundStyle(.white, Color.orange)
                         .background(Color.white)
                         .clipShape(Circle())
                 }
@@ -207,7 +207,7 @@ struct EditRecipeView: View {
                                 activeSheet = .ingredients
                             } label: {
                                 Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.orange)
                             }
                         }
                         

@@ -12,11 +12,11 @@ struct AddIngredientView: View {
         VStack(spacing: 24) {
             // Icon circle
             Circle()
-                .fill(Color.blue.opacity(0.1))
+                .fill(Color.orange.opacity(0.1))
                 .frame(width: 100, height: 100)
                 .overlay {
                     Image(systemName: "leaf.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.orange)
                         .font(.system(size: 40))
                 }
                 .padding(.top, 40)

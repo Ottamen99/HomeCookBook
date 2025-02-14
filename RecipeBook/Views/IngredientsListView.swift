@@ -71,11 +71,11 @@ private struct IngredientCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Icon circle
                 Circle()
-                    .fill(Color.blue.opacity(0.1))
+                    .fill(Color.orange.opacity(0.1))
                     .frame(width: 50, height: 50)
                     .overlay {
                         Image(systemName: "leaf.fill")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.orange)
                             .font(.system(size: 24))
                     }
                 
@@ -97,7 +97,7 @@ private struct IngredientCard: View {
                 HStack {
                     Spacer()
                     Image(systemName: "pencil")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.orange)
                         .font(.system(size: 14))
                 }
             }

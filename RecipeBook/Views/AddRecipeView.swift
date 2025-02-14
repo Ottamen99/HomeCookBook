@@ -177,10 +177,10 @@ struct AddRecipeView: View {
                             Spacer()
                             
                             Button {
-                                showingIngredientSheet = true
+                                activeSheet = .ingredients
                             } label: {
                                 Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.orange)
                             }
                         }
                         

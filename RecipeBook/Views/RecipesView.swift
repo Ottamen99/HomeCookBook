@@ -21,11 +21,12 @@ struct RecipesView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 ForEach(filteredRecipes) { recipe in
                     NavigationLink {
                         RecipeDetailView(recipe: recipe)
+                            .toolbar(.hidden, for: .tabBar)
                     } label: {
                         RecipeRowView(recipe: recipe)
                     }

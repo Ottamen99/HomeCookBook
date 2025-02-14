@@ -4,6 +4,7 @@ import CoreData
 struct RecipeDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
     let recipe: Recipe  // Change back to let
     
     @State private var showingEditSheet = false
@@ -11,6 +12,8 @@ struct RecipeDetailView: View {
     @State private var servings: Int16
     @State private var refreshID = UUID()
     @State private var showingCookingMode = false
+    @State private var scrollOffset: CGFloat = 0
+    private let imageHeight: CGFloat = 300
     
     // Add FetchRequest for ingredients
     @FetchRequest private var ingredients: FetchedResults<RecipeIngredient>
@@ -47,19 +50,128 @@ struct RecipeDetailView: View {
         recipe
     }
     
+    private var recipeStats: some View {
+        HStack(spacing: 40) {
+            StatView(value: "\(currentRecipe.timeInMinutes)", label: "min")
+            StatView(value: "\(String(format: "%.0f", 270))", label: "grams") // Hardcoded for now
+            StatView(value: "\(servings)", label: "serve")
+        }
+    }
+    
+    private struct StatView: View {
+        let value: String
+        let label: String
+        
+        var body: some View {
+            VStack(spacing: 4) {
+                Text(value)
+                    .fontWeight(.semibold)
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+        }
+    }
+    
+    private var recipeTags: some View {
+        HStack(spacing: 12) {
+            ForEach(["Lunch", "Shrimps", "Easy"], id: \.self) { tag in
+                Text(tag)
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.orange.opacity(0.1))
+                    .foregroundColor(.orange)
+                    .clipShape(Capsule())
+            }
+        }
+    }
+    
     private var recipeImage: some View {
         Group {
             if let imageData = currentRecipe.imageData,
                let uiImage = UIImage(data: imageData) {
-                Section {
+                VStack(spacing: 24) {
+                    // Circular image
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
-                        .frame(height: 200)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 250, height: 250)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.1), radius: 8)
+                        .padding(.top, 40)
+                    
+                    // Recipe name
+                    Text(currentRecipe.name ?? "")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    
+                    // Stats row
+                    HStack(spacing: 40) {
+                        StatView(value: "430", label: "kcal")
+                        StatView(value: "270", label: "grams")
+                        StatView(value: "25", label: "min")
+                        
+                        // Servings control
+                        HStack(spacing: 4) {
+                            Button(action: { 
+                                if servings > 1 {
+                                    servings -= 1
+                                }
+                            }) {
+                                Image(systemName: "minus")
+                                    .foregroundColor(.black)
+                                    .frame(width: 20, height: 20)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.1))
+                                    .clipShape(Circle())
+                            }
+                            
+                            VStack {
+                                Text("\(servings)")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                Text("serve")
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(width: 50)
+                            
+                            Button(action: { 
+                                if servings < 20 {
+                                    servings += 1
+                                }
+                            }) {
+                                Image(systemName: "plus")
+                                    .foregroundColor(.black)
+                                    .frame(width: 20, height: 20)
+                                    .padding(8)
+                                    .background(Color.gray.opacity(0.1))
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .font(.body)
+                    }
+                    .padding()
+                    .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(.gray, lineWidth: 0.5)
+                        )
+                    
+                    // Tags
+                    HStack(spacing: 12) {
+                        ForEach(["Lunch", "Shrimps", "Easy"], id: \.self) { tag in
+                            Text(tag)
+                                .font(.subheadline)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.orange.opacity(0.1))
+                                .foregroundColor(.orange)
+                                .clipShape(Capsule())
+                        }
+                    }
                 }
-                .listRowInsets(EdgeInsets())
+                .padding(.bottom, 20)
             }
         }
     }
@@ -102,28 +214,18 @@ struct RecipeDetailView: View {
     
     private func ingredientView(for recipeIngredient: RecipeIngredient) -> some View {
         let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
-        return HStack(spacing: 12) {
-            Circle()
-                .fill(Color.blue.opacity(0.1))
-                .frame(width: 32, height: 32)
-                .overlay {
-                    Image(systemName: "leaf.fill")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 14))
-                }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                // Use Text view with ID to force refresh when ingredient name changes
-                if let ingredient = recipeIngredient.ingredient {
-                    Text(ingredient.name ?? "")
-                        .id("ingredient-\(ingredient.objectID)-\(ingredient.name ?? "")")
-                        .font(.headline)
-                }
-                Text(String(format: "%.2f %@", scaledQuantity, recipeIngredient.unit ?? ""))
-                    .font(.subheadline)
+        return HStack {
+            if let ingredient = recipeIngredient.ingredient {
+                Text(ingredient.name ?? "")
+                    .font(.body)
+                
+                Spacer()
+                
+                Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
                     .foregroundColor(.secondary)
             }
         }
+        .padding(.vertical, 8)
     }
     
     private var ingredientsSection: some View {
@@ -141,21 +243,6 @@ struct RecipeDetailView: View {
                 Text("Step \(step.order + 1)")
                     .font(.headline)
                     .foregroundColor(.blue)
-                
-                Spacer()
-                
-                if let duration = StepDuration.detect(in: step.instructions ?? "") {
-                    Button {
-                        startNativeTimer(duration: duration)
-                    } label: {
-                        Label("Set \(duration.formattedString) timer", systemImage: "timer")
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
             }
             
             Text(step.instructions ?? "")
@@ -210,41 +297,115 @@ struct RecipeDetailView: View {
         }
     }
     
-    var body: some View {
-        List {
-            recipeImage
-            recipeDetails
-            recipeDescription
-            ingredientsSection
-            stepsSection
-            deleteSection
-        }
-        .id(refreshID)
-        .navigationTitle(currentRecipe.name ?? "Recipe Details")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack {
-                    Button {
-                        showingCookingMode = true
-                    } label: {
-                        Image(systemName: "play.circle")
-                    }
-                    
-                    Button {
-                        showingEditSheet = true
-                    } label: {
-                        Text("Edit")
-                    }
+    // Create a separate view for the toolbar buttons
+    private var toolbarButtons: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 16) {
+                Button(action: { showingEditSheet = true }) {
+                    Image(systemName: "pencil")
+                        .foregroundColor(.black)
+                        .padding()
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .shadow(color: .black.opacity(0.1), radius: 5)
                 }
             }
         }
+        .padding(.horizontal)
+    }
+    
+    // Update the body view
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .top) {
+                // Main content
+                ScrollView {
+                    VStack(spacing: 0) {
+                        recipeImage
+                        
+                        // Ingredients section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Ingredients")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            ForEach(ingredients) { recipeIngredient in
+                                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
+                                HStack {
+                                    if let ingredient = recipeIngredient.ingredient {
+                                        Text(ingredient.name ?? "")
+                                            .font(.body)
+                                        
+                                        Spacer()
+                                        
+                                        Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding()
+                        
+                        // Add padding at the bottom for the fixed button
+                        Color.clear.frame(height: 100)
+                    }
+                }
+                
+                // Overlay toolbar at top
+                VStack {
+                    toolbarButtons
+                        .padding(.top, 8)
+                    
+                    Spacer()
+                    
+                    // Fixed Start cooking button at bottom
+                    VStack {
+                        Button(action: { showingCookingMode = true }) {
+                            HStack {
+                                Image(systemName: "play.fill")
+                                Text("Start cooking")
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black)
+                            .cornerRadius(12)
+                        }
+                        .padding()
+                    }
+                    .background(
+                        Rectangle()
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                    )
+                }
+            }
+            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .tabBar)
+        }
+        .id(refreshID)
         .sheet(isPresented: $showingEditSheet) {
             refreshID = UUID()
         } content: {
-            EditRecipeView(recipe: currentRecipe)
+            NavigationStack {
+                EditRecipeView(recipe: currentRecipe)
+            }
         }
         .sheet(isPresented: $showingCookingMode) {
-            NavigationView {
+            NavigationStack {
                 CookingModeView(recipe: recipe)
             }
         }
@@ -262,5 +423,69 @@ struct RecipeDetailView: View {
         viewContext.delete(currentRecipe)
         try? viewContext.save()
         dismiss()
+    }
+    
+    // Change IngredientsListView to a computed property to avoid redeclaration
+    private var ingredientsListView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ingredients")
+                .font(.headline)
+            
+            ForEach(ingredients) { recipeIngredient in
+                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
+                HStack {
+                    if let ingredient = recipeIngredient.ingredient {
+                        Text(ingredient.name ?? "")
+                            .font(.body)
+                        
+                        Spacer()
+                        
+                        Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .padding(.vertical)
+    }
+}
+
+// Add these supporting views
+private struct ServingsControlView: View {
+    @Binding var servings: Int16
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            Button(action: { 
+                if servings > 1 {
+                    servings -= 1
+                }
+            }) {
+                Image(systemName: "minus")
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            
+            Text("\(servings)")
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(width: 50)
+            
+            Button(action: { 
+                if servings < 20 {
+                    servings += 1
+                }
+            }) {
+                Image(systemName: "plus")
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            Spacer()
+        }
+        .padding(.vertical, 8)
     }
 } 

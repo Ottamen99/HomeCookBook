@@ -16,6 +16,7 @@ struct AddRecipeView: View {
     @State private var selectedIngredients: [SelectedIngredient] = []
     @State private var showingIngredientSheet = false
     @State private var image: UIImage?
+    @State private var activeSheet: AddRecipeSheet?
     
     private var recipeImage: some View {
         VStack(spacing: 24) {
@@ -42,11 +43,11 @@ struct AddRecipeView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 Button {
-                    // Add image picker functionality
+                    activeSheet = .imagePicker
                 } label: {
                     Image(systemName: "camera.circle.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(.white, Color.blue)
+                        .foregroundStyle(.white, Color.orange)
                         .background(Color.white)
                         .clipShape(Circle())
                 }
@@ -187,21 +188,25 @@ struct AddRecipeView: View {
                             HStack {
                                 Text(ingredient.ingredient.name ?? "")
                                     .font(.body)
+                                    .lineLimit(1)
                                 
                                 Spacer()
                                 
-                                TextField("Qty", value: $ingredient.quantity, format: .number)
-                                    .keyboardType(.decimalPad)
-                                    .frame(width: 60)
-                                    .multilineTextAlignment(.trailing)
-                                
-                                Picker("Unit", selection: $ingredient.unit) {
-                                    ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
-                                        Text(unit.displayName).tag(unit)
+                                HStack(spacing: 8) {
+                                    TextField("Qty", value: $ingredient.quantity, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .frame(width: 50)
+                                        .multilineTextAlignment(.trailing)
+                                    
+                                    Picker("Unit", selection: $ingredient.unit) {
+                                        ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                            Text(unit.displayName).tag(unit)
+                                        }
                                     }
+                                    .foregroundColor(.orange)
+                                    .pickerStyle(.menu)
+                                    .frame(width: 120)
                                 }
-                                .pickerStyle(.menu)
-                                .frame(width: 80)
                             }
                             .padding(.vertical, 8)
                         }
@@ -223,13 +228,6 @@ struct AddRecipeView: View {
                     Text("New Recipe")
                         .font(.headline)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        saveRecipe()
-                        dismiss()
-                    }
-                    .disabled(name.isEmpty || selectedIngredients.isEmpty)
-                }
             }
             .safeAreaInset(edge: .bottom) {
                 Button(action: {
@@ -249,8 +247,13 @@ struct AddRecipeView: View {
                 .background(.white)
             }
         }
-        .sheet(isPresented: $showingIngredientSheet) {
-            IngredientSelectionView(selectedIngredients: $selectedIngredients)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .ingredients:
+                IngredientSelectionView(selectedIngredients: $selectedIngredients)
+            case .imagePicker:
+                ImagePicker(image: $image)
+            }
         }
     }
     
@@ -278,4 +281,16 @@ struct SelectedIngredient: Identifiable {
     let ingredient: Ingredient
     var quantity: Double
     var unit: UnitOfMeasure
+}
+
+enum AddRecipeSheet: Identifiable {
+    case imagePicker
+    case ingredients
+    
+    var id: Int {
+        switch self {
+        case .imagePicker: return 0
+        case .ingredients: return 1
+        }
+    }
 } 

@@ -8,7 +8,9 @@ struct CookingModeView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     private var progress: Double {
-        Double(completedSteps.count) / Double(recipe.stepsArray.count)
+        let total = Double(recipe.stepsArray.count)
+        guard total > 0 else { return 0 }
+        return min(1.0, Double(completedSteps.count) / total)
     }
     
     private var currentStep: Step? {

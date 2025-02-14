@@ -23,10 +23,10 @@ struct ContentView: View {
                     Label("Recipes", systemImage: "book")
                 }
 
-            PantryView()
+            /*PantryView()
                 .tabItem {
                     Label("My Pantry", systemImage: "basket.fill")
-                }
+                }*/
             
             IngredientsView()
                 .tabItem {

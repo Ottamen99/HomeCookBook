@@ -17,6 +17,7 @@ struct AddRecipeView: View {
     @State private var showingIngredientSheet = false
     @State private var image: UIImage?
     @State private var activeSheet: AddRecipeSheet?
+    @State private var difficulty: Difficulty = .medium
     
     private var recipeImage: some View {
         VStack(spacing: 24) {
@@ -61,7 +62,7 @@ struct AddRecipeView: View {
                 .multilineTextAlignment(.center)
             
             // Stats row
-            HStack(spacing: 40) {
+            HStack(spacing: 20) {
                 // Time
                 HStack(spacing: 4) {
                     Button(action: {
@@ -71,7 +72,7 @@ struct AddRecipeView: View {
                     }) {
                         Image(systemName: "minus")
                             .foregroundColor(.black)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 10, height: 10)
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
                             .clipShape(Circle())
@@ -79,7 +80,6 @@ struct AddRecipeView: View {
                     
                     VStack {
                         Text("\(timeInMinutes)")
-                            .font(.title3)
                             .fontWeight(.bold)
                         Text("min")
                             .foregroundColor(.gray)
@@ -93,7 +93,7 @@ struct AddRecipeView: View {
                     }) {
                         Image(systemName: "plus")
                             .foregroundColor(.black)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 10, height: 10)
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
                             .clipShape(Circle())
@@ -110,7 +110,7 @@ struct AddRecipeView: View {
                     }) {
                         Image(systemName: "minus")
                             .foregroundColor(.black)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 10, height: 10)
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
                             .clipShape(Circle())
@@ -118,7 +118,6 @@ struct AddRecipeView: View {
                     
                     VStack {
                         Text("\(servings)")
-                            .font(.title3)
                             .fontWeight(.bold)
                         Text("serve")
                             .foregroundColor(.gray)
@@ -132,13 +131,34 @@ struct AddRecipeView: View {
                     }) {
                         Image(systemName: "plus")
                             .foregroundColor(.black)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 10, height: 10)
                             .padding(8)
                             .background(Color.gray.opacity(0.1))
                             .clipShape(Circle())
                     }
                 }
                 .font(.body)
+                
+                // Difficulty selector
+                VStack(spacing: 4) {
+                    Menu {
+                        Picker("Difficulty", selection: $difficulty) {
+                            ForEach(Difficulty.allCases, id: \.self) { level in
+                                Label(level.rawValue, systemImage: level.icon)
+                                    .foregroundColor(level.color)
+                                    .tag(level)
+                            }
+                        }
+                    } label: {
+                        VStack {
+                            Image(systemName: difficulty.icon)
+                                .foregroundColor(difficulty.color)
+                            Text(difficulty.rawValue)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(width: 70)
+                    }
+                }
             }
             .padding()
             .overlay(
@@ -263,7 +283,14 @@ struct AddRecipeView: View {
         recipe.desc = description
         recipe.timeInMinutes = timeInMinutes
         recipe.servings = servings
+        recipe.difficulty = difficulty.rawValue
         
+        // Save image data
+        if let image = image {
+            recipe.imageData = image.jpegData(compressionQuality: 0.8)
+        }
+        
+        // Save ingredients
         for selected in selectedIngredients {
             let recipeIngredient = RecipeIngredient(context: viewContext)
             recipeIngredient.recipe = recipe

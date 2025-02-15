@@ -109,8 +109,12 @@ struct RecipeDetailView: View {
                     
                     // Stats row
                     HStack(spacing: 40) {
-                        StatView(value: "430", label: "kcal")
-                        StatView(value: "270", label: "grams")
+                        
+                        if let difficultyString = currentRecipe.difficulty,
+                           let difficulty = Difficulty(rawValue: difficultyString) {
+                            DifficultyPill(difficulty: difficulty)
+                        }
+                        
                         StatView(value: "25", label: "min")
                         
                         // Servings control
@@ -157,19 +161,6 @@ struct RecipeDetailView: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .stroke(.gray, lineWidth: 0.5)
                         )
-                    
-                    // Tags
-                    HStack(spacing: 12) {
-                        ForEach(["Lunch", "Shrimps", "Easy"], id: \.self) { tag in
-                            Text(tag)
-                                .font(.subheadline)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.orange.opacity(0.1))
-                                .foregroundColor(.orange)
-                                .clipShape(Capsule())
-                        }
-                    }
                 }
                 .padding(.bottom, 20)
             }
@@ -487,5 +478,23 @@ private struct ServingsControlView: View {
             Spacer()
         }
         .padding(.vertical, 8)
+    }
+}
+
+// Add helper view for difficulty pill
+private struct DifficultyPill: View {
+    let difficulty: Difficulty
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: difficulty.icon)
+            Text(difficulty.rawValue)
+        }
+        .font(.subheadline)
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(difficulty.color)
+        .clipShape(Capsule())
     }
 } 

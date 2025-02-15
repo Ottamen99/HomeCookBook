@@ -9,73 +9,173 @@ struct IngredientDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var showingDeleteErrorAlert = false
     
-    var usedInRecipes: [Recipe] {
+    private var usedInRecipes: [Recipe] {
         let recipeIngredients = ingredient.recipeIngredients as? Set<RecipeIngredient> ?? []
-        return recipeIngredients.compactMap { $0.recipe }
+        return recipeIngredients.compactMap { $0.recipe }.sorted { ($0.name ?? "") < ($1.name ?? "") }
     }
     
-    var canDelete: Bool {
+    private var canDelete: Bool {
         usedInRecipes.isEmpty
     }
     
-    var body: some View {
-        List {
-            Section {
-                if let description = ingredient.desc, !description.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Description")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text(description)
-                    }
-                }
+    init(ingredient: Ingredient) {
+        self.ingredient = ingredient
+        
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.buttonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.orange]
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        
+        UINavigationBar.appearance().tintColor = .orange
+    }
+    
+    // Create a separate view for the toolbar buttons
+    private var toolbarButtons: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
             }
             
-            if !usedInRecipes.isEmpty {
-                Section("Used in Recipes") {
-                    ForEach(usedInRecipes) { recipe in
-                        NavigationLink {
-                            RecipeDetailView(recipe: recipe)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(recipe.name ?? "")
-                                    .font(.headline)
-                                let quantity = recipe.recipeIngredients?
-                                    .first { ($0 as? RecipeIngredient)?.ingredient == ingredient }
-                                    .flatMap { $0 as? RecipeIngredient }
-                                if let quantity {
-                                    Text("\(String(format: "%.1f", quantity.quantity)) \(quantity.unit ?? "")")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+            Spacer()
+            
+            Button {
+                showingEditSheet = true
+            } label: {
+                Image(systemName: "pencil")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    var body: some View {
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Ingredient icon
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 120, height: 120)
+                        .overlay {
+                            Image(systemName: "leaf.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.orange)
+                        }
+                        .padding(.top, 40)
+                    
+                    // Name and description
+                    VStack(spacing: 8) {
+                        Text(ingredient.name ?? "")
+                            .font(.title)
+                            .fontWeight(.bold)
+                        
+                        if let description = ingredient.desc, !description.isEmpty {
+                            Text(description)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    
+                    // Used in recipes section
+                    if !usedInRecipes.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Used in Recipes")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            ForEach(usedInRecipes) { recipe in
+                                NavigationLink {
+                                    RecipeDetailView(recipe: recipe)
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(recipe.name ?? "")
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            
+                                            if let quantity = recipe.recipeIngredients?
+                                                .first(where: { ($0 as? RecipeIngredient)?.ingredient == ingredient }) as? RecipeIngredient {
+                                                Text("\(String(format: "%.1f", quantity.quantity)) \(quantity.unit ?? "")")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding()
+                                    .background(Color(.systemBackground))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.orange.opacity(0.1), lineWidth: 1)
+                                    )
                                 }
                             }
                         }
+                        .padding()
                     }
                 }
+                // Add padding at the bottom for the floating button
+                Color.clear.frame(height: 100)
             }
             
-            Section {
-                Button("Delete Ingredient", role: .destructive) {
-                    if canDelete {
-                        showingDeleteAlert = true
-                    } else {
-                        showingDeleteErrorAlert = true
+            // Overlay toolbar at top
+            VStack {
+                toolbarButtons
+                    .padding(.top, 8)
+                
+                Spacer()
+                
+                // Floating delete button
+                VStack {
+                    Button(action: {
+                        if canDelete {
+                            showingDeleteAlert = true
+                        } else {
+                            showingDeleteErrorAlert = true
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                            Text("Delete Ingredient")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(12)
                     }
+                    .padding()
                 }
+                .background(
+                    Rectangle()
+                        .fill(.white)
+                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                )
             }
         }
-        .navigationTitle(ingredient.name ?? "")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingEditSheet = true
-                } label: {
-                    Text("Edit")
-                }
-            }
-        }
+        .navigationBarHidden(true)
         .sheet(isPresented: $showingEditSheet) {
-            IngredientFormView(mode: .edit(ingredient))
+            NavigationStack {
+                IngredientFormView(mode: .edit(ingredient))
+            }
         }
         .alert("Delete Ingredient", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) {}
@@ -93,7 +193,6 @@ struct IngredientDetailView: View {
     }
     
     private func deleteIngredient() {
-        guard canDelete else { return }
         viewContext.delete(ingredient)
         try? viewContext.save()
         dismiss()

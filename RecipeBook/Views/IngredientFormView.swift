@@ -8,118 +8,117 @@ enum IngredientFormMode {
 struct IngredientFormView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
-    
     let mode: IngredientFormMode
     
-    @State private var name = ""
-    @State private var description = ""
+    @State private var name: String
+    @State private var description: String
     @State private var showingDeleteErrorAlert = false
     
-    var title: String {
+    init(mode: IngredientFormMode) {
+        self.mode = mode
+        
+        switch mode {
+        case .add:
+            _name = State(initialValue: "")
+            _description = State(initialValue: "")
+        case .edit(let ingredient):
+            _name = State(initialValue: ingredient.name ?? "")
+            _description = State(initialValue: ingredient.desc ?? "")
+        }
+    }
+    
+    private var title: String {
         switch mode {
         case .add: return "New Ingredient"
         case .edit: return "Edit Ingredient"
         }
     }
     
-    var canDelete: Bool {
-        if case .edit(let ingredient) = mode {
-            return (ingredient.recipeIngredients?.count ?? 0) == 0
-        }
-        return false
-    }
-    
-    init(mode: IngredientFormMode) {
-        self.mode = mode
-        if case .edit(let ingredient) = mode {
-            _name = State(initialValue: ingredient.name ?? "")
-            _description = State(initialValue: ingredient.desc ?? "")
+    private var buttonTitle: String {
+        switch mode {
+        case .add: return "Create Ingredient"
+        case .edit: return "Save Changes"
         }
     }
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section {
-                    TextField("Name", text: $name)
-                    TextField("Description", text: $description, axis: .vertical)
-                        .lineLimit(3...6)
-                }
-                
-                if case .edit = mode {
-                    Section {
-                        Button("Delete Ingredient", role: .destructive) {
-                            if canDelete {
-                                if case .edit(let ingredient) = mode {
-                                    viewContext.delete(ingredient)
-                                    try? viewContext.save()
-                                    dismiss()
-                                }
-                            } else {
-                                showingDeleteErrorAlert = true
-                            }
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Ingredient icon
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 120, height: 120)
+                        .overlay {
+                            Image(systemName: "leaf.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.orange)
                         }
+                        .padding(.top, 40)
+                    
+                    // Name input
+                    TextField("Ingredient Name", text: $name)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                    
+                    // Description section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Description")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        TextField("Add a description", text: $description, axis: .vertical)
+                            .lineLimit(3...6)
+                            .textFieldStyle(.roundedBorder)
                     }
+                    .padding()
                 }
             }
-            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        save()
-                    }
-                    .disabled(name.isEmpty)
+                ToolbarItem(placement: .principal) {
+                    Text(title)
+                        .font(.headline)
                 }
             }
-            .alert("Cannot Delete Ingredient", isPresented: $showingDeleteErrorAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if case .edit(let ingredient) = mode {
-                    Text("This ingredient cannot be deleted because it is used in \((ingredient.recipeIngredients?.count ?? 0)) recipe\(ingredient.recipeIngredients?.count == 1 ? "" : "s"). Please remove it from all recipes first.")
+            .safeAreaInset(edge: .bottom) {
+                Button(action: {
+                    save()
+                    dismiss()
+                }) {
+                    Text(buttonTitle)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.black)
+                        .cornerRadius(12)
                 }
+                .disabled(name.isEmpty)
+                .padding()
+                .background(.white)
             }
         }
     }
     
     private func save() {
-        viewContext.perform {
-            do {
-                switch mode {
-                case .add:
-                    let ingredient = Ingredient(context: viewContext)
-                    ingredient.name = name
-                    ingredient.desc = description
-                case .edit(let ingredient):
-                    ingredient.name = name
-                    ingredient.desc = description
-                    
-                    // Refresh related objects
-                    if let recipeIngredients = ingredient.recipeIngredients as? Set<RecipeIngredient> {
-                        for recipeIngredient in recipeIngredients {
-                            viewContext.refresh(recipeIngredient, mergeChanges: true)
-                            if let recipe = recipeIngredient.recipe {
-                                viewContext.refresh(recipe, mergeChanges: true)
-                            }
-                        }
-                    }
-                }
-                
-                try viewContext.save()
-                
-                // Refresh the entire view context
-                viewContext.refreshAllObjects()
-                
-                DispatchQueue.main.async {
-                    dismiss()
-                }
-            } catch {
-                print("Error saving ingredient: \(error)")
-            }
+        switch mode {
+        case .add:
+            let ingredient = Ingredient(context: viewContext)
+            ingredient.name = name
+            ingredient.desc = description
+            
+        case .edit(let ingredient):
+            ingredient.name = name
+            ingredient.desc = description
         }
+        
+        try? viewContext.save()
     }
 } 

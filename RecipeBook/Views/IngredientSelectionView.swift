@@ -5,6 +5,7 @@ struct IngredientSelectionView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Binding var selectedIngredients: [SelectedIngredient]
     @State private var searchText = ""
+    @State private var showingAddSheet = false
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)],
@@ -18,57 +19,103 @@ struct IngredientSelectionView: View {
         return ingredients.filter { ($0.name ?? "").localizedCaseInsensitiveContains(searchText) }
     }
     
+    private var toolbarButtons: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+            
+            Spacer()
+            
+            Button {
+                showingAddSheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+        }
+        .padding(.horizontal)
+    }
+    
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Search bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        
+                        TextField("Search ingredients", text: $searchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    .padding(.top, 80)
                     
-                    TextField("Search ingredients", text: $searchText)
-                        .textFieldStyle(.plain)
-                }
-                .padding(12)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding()
-                
-                // Ingredients grid
-                ScrollView {
+                    // Ingredients grid
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible())
-                    ], spacing: 16) {
+                    ], spacing: 12) {
                         ForEach(filteredIngredients) { ingredient in
-                            IngredientCard(
-                                ingredient: ingredient,
-                                isSelected: selectedIngredients.contains { $0.ingredient == ingredient },
-                                onTap: {
-                                    toggleIngredient(ingredient)
+                            let isSelected = selectedIngredients.contains { $0.ingredient == ingredient }
+                            
+                            Button {
+                                toggleIngredient(ingredient)
+                            } label: {
+                                VStack(spacing: 12) {
+                                    Circle()
+                                        .fill(isSelected ? Color.black.opacity(0.1) : Color.gray.opacity(0.1))
+                                        .frame(width: 60, height: 60)
+                                        .overlay {
+                                            Image(systemName: "leaf.fill")
+                                                .foregroundColor(isSelected ? .black : .gray)
+                                                .font(.system(size: 24))
+                                        }
+                                    
+                                    Text(ingredient.name ?? "")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(isSelected ? .black : .gray)
+                                        .multilineTextAlignment(.center)
                                 }
-                            )
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(isSelected ? Color.black.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                            }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding()
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    Text("Add Ingredients")
-                        .font(.headline)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
+            
+            // Overlay toolbar at top
+            VStack {
+                toolbarButtons
+                    .padding(.top, 8)
+                
+                Spacer()
+            }
+        }
+        .navigationBarHidden(true)
+        .sheet(isPresented: $showingAddSheet) {
+            NavigationStack {
+                IngredientFormView(mode: .add)
             }
         }
     }
@@ -79,46 +126,9 @@ struct IngredientSelectionView: View {
         } else {
             selectedIngredients.append(SelectedIngredient(
                 ingredient: ingredient,
-                quantity: 1.0,
+                quantity: 1,
                 unit: .grams
             ))
-        }
-    }
-}
-
-private struct IngredientCard: View {
-    let ingredient: Ingredient
-    let isSelected: Bool
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(ingredient.name ?? "")
-                        .font(.headline)
-                        .foregroundColor(isSelected ? .white : .primary)
-                        .multilineTextAlignment(.leading)
-                    
-                    Spacer()
-                    
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                if let description = ingredient.desc, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                        .lineLimit(2)
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.blue : Color(.systemGray6))
-            .cornerRadius(12)
         }
     }
 } 

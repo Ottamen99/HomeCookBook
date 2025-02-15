@@ -169,8 +169,25 @@ struct AddRecipeView: View {
         .padding(.top, 40)
     }
     
+    // Add toolbar buttons view
+    private var toolbarButtons: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal)
+    }
+    
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: 0) {
                     recipeImage
@@ -237,35 +254,46 @@ struct AddRecipeView: View {
                     Color.clear.frame(height: 100)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    Text("New Recipe")
-                        .font(.headline)
-                }
+            
+            // Overlay toolbar at top
+            VStack {
+                toolbarButtons
+                    .padding(.top, 8)
+                
+                Spacer()
+                
+                // Keep existing bottom button if any
             }
-            .safeAreaInset(edge: .bottom) {
-                Button(action: {
-                    saveRecipe()
+        }
+        .navigationBarHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
                     dismiss()
-                }) {
-                    Text("Create Recipe")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .cornerRadius(12)
                 }
-                .disabled(name.isEmpty || selectedIngredients.isEmpty)
-                .padding()
-                .background(.white)
             }
+            ToolbarItem(placement: .principal) {
+                Text("New Recipe")
+                    .font(.headline)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button(action: {
+                saveRecipe()
+                dismiss()
+            }) {
+                Text("Create Recipe")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.black)
+                    .cornerRadius(12)
+            }
+            .disabled(name.isEmpty || selectedIngredients.isEmpty)
+            .padding()
+            .background(.white)
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {

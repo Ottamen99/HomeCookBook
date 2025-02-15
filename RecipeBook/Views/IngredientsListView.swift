@@ -12,6 +12,8 @@ struct IngredientsListView: View {
     @State private var showingAddSheet = false
     @State private var editingIngredient: Ingredient?
     @State private var searchText = ""
+    @State private var showingDeleteAlert = false
+    @State private var selectedIngredient: Ingredient?
     
     init() {
         // Configure navigation bar button appearance
@@ -40,10 +42,10 @@ struct IngredientsListView: View {
                     } label: {
                         IngredientRowView(ingredient: ingredient)
                     }
-                    .listRowInsets(EdgeInsets())
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
-                            deleteIngredient(ingredient)
+                            selectedIngredient = ingredient
+                            showingDeleteAlert = true
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -67,10 +69,15 @@ struct IngredientsListView: View {
             .sheet(isPresented: $showingAddSheet) {
                 IngredientFormView(mode: .add)
             }
-            .sheet(item: $editingIngredient) { ingredient in
-                NavigationStack {
-                    IngredientFormView(mode: .edit(ingredient))
+            .alert("Delete Ingredient", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    if let ingredient = selectedIngredient {
+                        deleteIngredient(ingredient)
+                    }
                 }
+            } message: {
+                Text("Are you sure you want to delete this ingredient? This action cannot be undone.")
             }
         }
     }

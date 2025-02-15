@@ -24,6 +24,9 @@ struct RecipeDetailView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)]
     ) private var allIngredients: FetchedResults<Ingredient>
     
+    @State private var path = NavigationPath()
+    @State private var shouldDismiss = false
+    
     init(recipe: Recipe) {
         self.recipe = recipe
         _servings = State(initialValue: recipe.servings)
@@ -389,10 +392,13 @@ struct RecipeDetailView: View {
         }
         .id(refreshID)
         .sheet(isPresented: $showingEditSheet) {
-            refreshID = UUID()
-        } content: {
             NavigationStack {
-                EditRecipeView(recipe: currentRecipe)
+                EditRecipeView(recipe: recipe, rootDismiss: $shouldDismiss)
+            }
+        }
+        .onChange(of: shouldDismiss) { newValue in
+            if newValue {
+                dismiss()
             }
         }
         .sheet(isPresented: $showingCookingMode) {

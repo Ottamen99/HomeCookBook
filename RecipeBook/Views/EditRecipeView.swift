@@ -3,6 +3,8 @@ import SwiftUI
 struct EditRecipeView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
+    @Binding var rootDismiss: Bool
     let recipe: Recipe
     
     @State private var name: String
@@ -13,8 +15,9 @@ struct EditRecipeView: View {
     @State private var image: UIImage?
     @State private var steps: [RecipeStep] = []
     @State private var activeSheet: EditRecipeSheet?
+    @State private var showingDeleteAlert = false
     
-    init(recipe: Recipe) {
+    init(recipe: Recipe, rootDismiss: Binding<Bool>) {
         self.recipe = recipe
         _name = State(initialValue: recipe.name ?? "")
         _description = State(initialValue: recipe.desc ?? "")
@@ -43,6 +46,8 @@ struct EditRecipeView: View {
                 RecipeStep(step: step)
             })
         }
+        
+        _rootDismiss = rootDismiss
     }
     
     private var recipeImage: some View {
@@ -176,8 +181,65 @@ struct EditRecipeView: View {
         .padding(.top, 40)
     }
     
+    // Update toolbar buttons view
+    private var toolbarButtons: some View {
+        HStack {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+            
+            Spacer()
+            
+            Button {
+                showingDeleteAlert = true
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    // Add this view for the ingredient button
+    private var addIngredientsButton: some View {
+        Button {
+            activeSheet = .ingredients
+        } label: {
+            VStack(spacing: 12) {
+                Circle()
+                    .fill(Color.gray.opacity(0.1))
+                    .frame(width: 60, height: 60)
+                    .overlay {
+                        Image(systemName: "plus")
+                            .foregroundColor(.black)
+                            .font(.system(size: 24))
+                    }
+                
+                Text("Add Ingredients")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.black)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+    }
+    
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: 0) {
                     recipeImage
@@ -188,50 +250,66 @@ struct EditRecipeView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        TextField("Add a description", text: $description, axis: .vertical)
-                            .lineLimit(3...6)
-                            .textFieldStyle(.roundedBorder)
+                        TextEditor(text: $description)
+                            .frame(minHeight: 100, maxHeight: 200)
+                            .padding(8)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
                     }
                     .padding()
                     
                     // Ingredients
                     VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Ingredients")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                        Text("Ingredients")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        if selectedIngredients.isEmpty {
+                            addIngredientsButton
+                        } else {
+                            ForEach($selectedIngredients) { $ingredient in
+                                HStack {
+                                    Text(ingredient.ingredient.name ?? "")
+                                        .font(.body)
+                                    
+                                    Spacer()
+                                    
+                                    TextField("Qty", value: $ingredient.quantity, format: .number)
+                                        .keyboardType(.decimalPad)
+                                        .frame(width: 60)
+                                        .multilineTextAlignment(.trailing)
+                                    
+                                    Picker("Unit", selection: $ingredient.unit) {
+                                        ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                            Text(unit.displayName).tag(unit)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .frame(width: 80)
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                            }
                             
-                            Spacer()
-                            
+                            // Add more ingredients button
                             Button {
                                 activeSheet = .ingredients
                             } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                        
-                        ForEach($selectedIngredients) { $ingredient in
-                            HStack {
-                                Text(ingredient.ingredient.name ?? "")
-                                    .font(.body)
-                                
-                                Spacer()
-                                
-                                TextField("Qty", value: $ingredient.quantity, format: .number)
-                                    .keyboardType(.decimalPad)
-                                    .frame(width: 60)
-                                    .multilineTextAlignment(.trailing)
-                                
-                                Picker("Unit", selection: $ingredient.unit) {
-                                    ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
-                                        Text(unit.displayName).tag(unit)
-                                    }
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Add more ingredients")
                                 }
-                                .pickerStyle(.menu)
-                                .frame(width: 80)
+                                .foregroundColor(.black)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
                             }
-                            .padding(.vertical, 8)
                         }
                     }
                     .padding()
@@ -240,43 +318,39 @@ struct EditRecipeView: View {
                     Color.clear.frame(height: 100)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    Text("Edit Recipe")
-                        .font(.headline)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+            
+            // Overlay toolbar at top
+            VStack {
+                toolbarButtons
+                    .padding(.top, 8)
+                
+                Spacer()
+                
+                // Keep the bottom save button
+                VStack {
+                    Button(action: {
                         saveRecipe()
                         dismiss()
+                    }) {
+                        Text("Save Recipe")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black)
+                            .cornerRadius(12)
                     }
                     .disabled(name.isEmpty || selectedIngredients.isEmpty)
+                    .padding()
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button(action: {
-                    saveRecipe()
-                    dismiss()
-                }) {
-                    Text("Save Recipe")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .cornerRadius(12)
-                }
-                .disabled(name.isEmpty || selectedIngredients.isEmpty)
-                .padding()
-                .background(.white)
+                .background(
+                    Rectangle()
+                        .fill(.white)
+                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                )
             }
         }
+        .navigationBarHidden(true)
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .ingredients:
@@ -309,6 +383,15 @@ struct EditRecipeView: View {
                     }
                 }
             }
+        }
+        // Add delete alert
+        .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteRecipe()
+            }
+        } message: {
+            Text("Are you sure you want to delete this recipe? This action cannot be undone.")
         }
     }
     
@@ -390,6 +473,14 @@ struct EditRecipeView: View {
                 print("Error saving recipe: \(error)")
             }
         }
+    }
+    
+    // Update delete function
+    private func deleteRecipe() {
+        viewContext.delete(recipe)
+        try? viewContext.save()
+        dismiss()  // Dismiss the edit sheet
+        rootDismiss = true  // Trigger dismiss of the detail view
     }
 }
 

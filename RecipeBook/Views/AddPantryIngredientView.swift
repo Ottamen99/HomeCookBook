@@ -53,7 +53,7 @@ struct AddPantryIngredientView: View {
                     }
                 }
                 
-                if let selectedIngredient = selectedIngredient {
+                if selectedIngredient != nil {
                     Section("Quantity") {
                         HStack {
                             TextField("Quantity", value: $quantity, format: .number)

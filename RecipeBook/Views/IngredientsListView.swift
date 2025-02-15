@@ -13,6 +13,16 @@ struct IngredientsListView: View {
     @State private var editingIngredient: Ingredient?
     @State private var searchText = ""
     
+    init() {
+        // Configure navigation bar button appearance
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.buttonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.orange]
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+    }
+    
     private var filteredIngredients: [Ingredient] {
         if searchText.isEmpty {
             return Array(ingredients)
@@ -22,23 +32,25 @@ struct IngredientsListView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: 16),
-                    GridItem(.flexible(), spacing: 16)
-                ], spacing: 16) {
-                    ForEach(filteredIngredients) { ingredient in
-                        IngredientCard(
-                            ingredient: ingredient,
-                            onTap: {
-                                editingIngredient = ingredient
-                            }
-                        )
-                        .id(ingredient.objectID)  // Force refresh when ingredient changes
+            List {
+                ForEach(filteredIngredients) { ingredient in
+                    NavigationLink {
+                        IngredientDetailView(ingredient: ingredient)
+                            .toolbar(.hidden, for: .tabBar)
+                    } label: {
+                        IngredientRowView(ingredient: ingredient)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            deleteIngredient(ingredient)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
                 }
-                .padding()
             }
+            .listStyle(.plain)
             .navigationTitle("Ingredients")
             .searchable(text: $searchText, prompt: "Search ingredients")
             .toolbar {
@@ -47,6 +59,8 @@ struct IngredientsListView: View {
                         showingAddSheet = true
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 17, weight: .semibold))
                     }
                 }
             }
@@ -60,52 +74,43 @@ struct IngredientsListView: View {
             }
         }
     }
-}
-
-private struct IngredientCard: View {
-    let ingredient: Ingredient
-    let onTap: () -> Void
     
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Icon circle
-                Circle()
-                    .fill(Color.orange.opacity(0.1))
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(systemName: "leaf.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 24))
-                    }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(ingredient.name ?? "")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    if let description = ingredient.desc, !description.isEmpty {
-                        Text(description)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                }
-                
-                Spacer()
-                
-                HStack {
-                    Spacer()
-                    Image(systemName: "pencil")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 14))
-                }
-            }
-            .padding()
-            .frame(height: 160)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
+    private func deleteIngredient(_ ingredient: Ingredient) {
+        withAnimation {
+            viewContext.delete(ingredient)
+            try? viewContext.save()
         }
     }
+}
+
+#Preview {
+    let context = PersistenceController.preview.container.viewContext
+    
+    // Create sample ingredients
+    let flour = Ingredient(context: context)
+    flour.name = "Flour"
+    flour.desc = "All-purpose flour"
+    
+    let sugar = Ingredient(context: context)
+    sugar.name = "Sugar"
+    sugar.desc = "Granulated sugar"
+    
+    let butter = Ingredient(context: context)
+    butter.name = "Butter"
+    butter.desc = "Unsalted butter"
+    
+    // Create a sample recipe to show "Used in X recipes"
+    let recipe = Recipe(context: context)
+    recipe.name = "Cookies"
+    
+    let recipeIngredient = RecipeIngredient(context: context)
+    recipeIngredient.ingredient = flour
+    recipeIngredient.recipe = recipe
+    recipeIngredient.quantity = 250
+    recipeIngredient.unit = "grams"
+    
+    try? context.save()
+    
+    return IngredientsListView()
+        .environment(\.managedObjectContext, context)
 } 

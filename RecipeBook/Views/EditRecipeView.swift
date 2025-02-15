@@ -313,7 +313,7 @@ struct EditRecipeView: View {
     }
     
     private func updateStepOrder() {
-        for (index, step) in steps.enumerated() {
+        for (index, _) in steps.enumerated() {
             steps[index].order = Int16(index)
         }
     }

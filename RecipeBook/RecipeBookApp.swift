@@ -20,7 +20,7 @@ struct RecipeBookApp: App {
         // Request Live Activities permission if available
         if #available(iOS 16.1, *) {
             Task {
-                let authorized = await ActivityAuthorizationInfo().areActivitiesEnabled
+                let authorized = ActivityAuthorizationInfo().areActivitiesEnabled
                 print("Live Activities authorized: \(authorized)")
             }
         }

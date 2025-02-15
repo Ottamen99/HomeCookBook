@@ -232,7 +232,7 @@ private struct StepTimerView: View {
         
         Task {
             do {
-                activity = try await Activity.request(
+                activity = try Activity.request(
                     attributes: attributes,
                     content: initialContent
                 )

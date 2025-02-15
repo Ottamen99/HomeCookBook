@@ -33,12 +33,12 @@ struct AddRecipeView: View {
                         .shadow(color: .black.opacity(0.1), radius: 8)
                 } else {
                     Circle()
-                        .fill(Color.gray.opacity(0.1))
+                        .fill(Color.orange.opacity(0.1))
                         .frame(width: 250, height: 250)
                         .overlay {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.system(size: 80))
+                                .foregroundColor(.orange)
                         }
                 }
             }
@@ -288,6 +288,12 @@ struct AddRecipeView: View {
         // Save image data
         if let image = image {
             recipe.imageData = image.jpegData(compressionQuality: 0.8)
+        } else {
+            // Create default image
+            let defaultImage = UIImage(systemName: "fork.knife.circle.fill")?
+                .withTintColor(.orange)
+                .withRenderingMode(.alwaysOriginal)
+            recipe.imageData = defaultImage?.jpegData(compressionQuality: 1.0)
         }
         
         // Save ingredients

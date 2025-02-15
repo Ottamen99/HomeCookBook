@@ -14,6 +14,15 @@ struct ContentView: View {
     
     init() {
         _viewModel = StateObject(wrappedValue: RecipeViewModel(viewContext: PersistenceController.shared.container.viewContext))
+        
+        // Configure tab bar appearance
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithDefaultBackground()
+        tabBarAppearance.stackedLayoutAppearance.selected.iconColor = .orange
+        tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.orange]
+        
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
     }
     
     var body: some View {
@@ -28,7 +37,7 @@ struct ContentView: View {
                     Label("My Pantry", systemImage: "basket.fill")
                 }*/
             
-            IngredientsView()
+            IngredientsListView()
                 .tabItem {
                     Label("Ingredients", systemImage: "leaf")
                 }

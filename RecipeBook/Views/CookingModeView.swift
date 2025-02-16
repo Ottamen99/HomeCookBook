@@ -4,6 +4,7 @@ struct CookingModeView: View {
     let recipe: Recipe
     @State private var completedSteps = Set<Int>()
     @State private var currentStepIndex = 0
+    @State private var showCompletedSteps = true
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
@@ -22,6 +23,27 @@ struct CookingModeView: View {
             return Array(ingredients).sorted { ($0.ingredient?.name ?? "") < ($1.ingredient?.name ?? "") }
         }
         return []
+    }
+    
+    private var sortedAndFilteredSteps: [Step] {
+        let steps = recipe.stepsArray
+        if showCompletedSteps {
+            return steps
+        } else {
+            return steps.filter { !completedSteps.contains(Int($0.order)) }
+        }
+    }
+    
+    private func getStepStatus(_ step: Step) -> (isCompleted: Bool, isActive: Bool, canComplete: Bool) {
+        let isCompleted = completedSteps.contains(Int(step.order))
+        let stepIndex = Int(step.order)
+        let previousStepCompleted = stepIndex == 0 || completedSteps.contains(stepIndex - 1)
+        
+        return (
+            isCompleted: isCompleted,
+            isActive: currentStepIndex == stepIndex,
+            canComplete: previousStepCompleted
+        )
     }
     
     private var cookingHeader: some View {
@@ -117,68 +139,21 @@ struct CookingModeView: View {
                                 .fontWeight(.bold)
                                 .padding(.horizontal)
                             
-                            ForEach(recipe.stepsArray) { step in
-                                let isCompleted = completedSteps.contains(Int(step.order))
-                                let isCurrent = currentStepIndex == Int(step.order)
+                            ForEach(sortedAndFilteredSteps) { step in
+                                let status = getStepStatus(step)
                                 
-                                Button {
-                                    handleStepSelect(step)
-                                } label: {
-                                    HStack(alignment: .top, spacing: 16) {
-                                        // Step number circle
-                                        Circle()
-                                            .fill(isCompleted ? Color.orange : (isCurrent ? Color.orange.opacity(0.2) : Color.gray.opacity(0.1)))
-                                            .frame(width: 36, height: 36)
-                                            .overlay {
-                                                if isCompleted {
-                                                    Image(systemName: "checkmark")
-                                                        .foregroundColor(.white)
-                                                } else {
-                                                    Text("\(Int(step.order) + 1)")
-                                                        .foregroundColor(isCurrent ? .orange : .gray)
-                                                }
-                                            }
-                                        
-                                        VStack(alignment: .leading, spacing: 12) {
-                                            Text(step.instructions ?? "")
-                                                .foregroundColor(isCurrent ? .primary : .secondary)
-                                                .multilineTextAlignment(.leading)
-                                            
-                                            if isCurrent {
-                                                // Only keep the complete/incomplete button
-                                                Button {
-                                                    handleStepComplete(step, completed: !isCompleted)
-                                                } label: {
-                                                    HStack(spacing: 8) {
-                                                        Image(systemName: isCompleted ? "xmark.circle.fill" : "checkmark.circle.fill")
-                                                        Text(isCompleted ? "Mark Incomplete" : "Mark Complete")
-                                                            .fontWeight(.medium)
-                                                    }
-                                                    .foregroundColor(isCompleted ? .red : .orange)
-                                                    .padding(.vertical, 8)
-                                                    .padding(.horizontal, 16)
-                                                    .background(
-                                                        RoundedRectangle(cornerRadius: 20)
-                                                            .fill(isCompleted ? Color.red.opacity(0.1) : Color.orange.opacity(0.1))
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        
-                                        Spacer(minLength: 0)
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(isCurrent ? Color.orange.opacity(0.05) : Color(.systemBackground))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(isCurrent ? Color.orange.opacity(0.5) : Color.clear, lineWidth: 1)
-                                            )
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                                StepTimelineView(
+                                    recipe: recipe,
+                                    step: step,
+                                    isCompleted: status.isCompleted,
+                                    isActive: status.isActive,
+                                    isFirst: step == recipe.stepsArray.first,
+                                    isLast: step == recipe.stepsArray.last,
+                                    onToggleComplete: { completed in
+                                        toggleStepCompletion(step, completed: completed)
+                                    },
+                                    canComplete: status.canComplete
+                                )
                             }
                         }
                         .padding(.vertical)
@@ -223,29 +198,24 @@ struct CookingModeView: View {
         }
     }
     
-    private func handleStepComplete(_ step: Step, completed: Bool) {
+    private func toggleStepCompletion(_ step: Step, completed: Bool) {
         withAnimation {
+            let stepOrder = Int(step.order)
             if completed {
                 // Only allow completion if previous step is completed
-                if step.order == 0 || completedSteps.contains(Int(step.order - 1)) {
-                    completedSteps.insert(Int(step.order))
+                if stepOrder == 0 || completedSteps.contains(stepOrder - 1) {
+                    completedSteps.insert(stepOrder)
                     if currentStepIndex < recipe.stepsArray.count - 1 {
-                        currentStepIndex = Int(step.order) + 1
+                        currentStepIndex = stepOrder + 1
                     }
                 }
             } else {
                 // Only allow uncompleting if no later steps are completed
-                let laterStepsCompleted = completedSteps.contains { $0 > Int(step.order) }
+                let laterStepsCompleted = completedSteps.contains { $0 > stepOrder }
                 if !laterStepsCompleted {
-                    completedSteps.remove(Int(step.order))
+                    completedSteps.remove(stepOrder)
                 }
             }
-        }
-    }
-    
-    private func handleStepSelect(_ step: Step) {
-        withAnimation {
-            currentStepIndex = Int(step.order)
         }
     }
 }

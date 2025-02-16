@@ -117,6 +117,7 @@ struct IngredientFormView: View {
                                 .background(Color(.systemGray6))
                                 .cornerRadius(8)
                                 .fixedSize(horizontal: false, vertical: true)
+                                .submitLabel(.done)
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
@@ -125,6 +126,7 @@ struct IngredientFormView: View {
                     // Add some bottom padding for the save button
                     Color.clear.frame(height: 100)
                 }
+                .dismissKeyboardOnTap()
             }
             
             // Bottom save button
@@ -168,5 +170,30 @@ struct IngredientFormView: View {
         }
         
         try? viewContext.save()
+    }
+}
+
+struct BackgroundDismissKeyboard: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        let tapGesture = UITapGestureRecognizer(target: context.coordinator,
+                                               action: #selector(Coordinator.handleTap))
+        view.addGestureRecognizer(tapGesture)
+        return view
+    }
+    
+    func updateUIView(_ uiView: UIView, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject {
+        @objc func handleTap() {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                         to: nil,
+                                         from: nil,
+                                         for: nil)
+        }
     }
 } 

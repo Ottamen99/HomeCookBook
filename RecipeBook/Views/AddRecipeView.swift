@@ -189,7 +189,7 @@ struct AddRecipeView: View {
     var body: some View {
         ZStack(alignment: .top) {
             ScrollView {
-                VStack(spacing: 0) {
+                VStack(spacing: 24) {
                     recipeImage
                     
                     // Description
@@ -198,9 +198,11 @@ struct AddRecipeView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        TextField("Add a description", text: $description, axis: .vertical)
-                            .lineLimit(3...6)
-                            .textFieldStyle(.roundedBorder)
+                        TextEditor(text: $description)
+                            .frame(minHeight: 100, maxHeight: 200)
+                            .scrollContentBackground(.hidden)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
                     }
                     .padding()
                     
@@ -254,6 +256,7 @@ struct AddRecipeView: View {
                     Color.clear.frame(height: 100)
                 }
             }
+            .dismissKeyboardOnTap()
             
             // Overlay toolbar at top
             VStack {

@@ -231,23 +231,63 @@ struct RecipeDetailView: View {
         }
     }
     
-    private func stepView(for step: Step) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Step \(step.order + 1)")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-            }
+    private var stepsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Instructions")
+                .font(.title2)
+                .fontWeight(.bold)
             
-            Text(step.instructions ?? "")
-            
-            if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
-                Text("Uses: " + ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            ForEach(currentRecipe.stepsArray) { step in
+                VStack(alignment: .leading, spacing: 12) {
+                    // Step header
+                    HStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.1))
+                            .frame(width: 32, height: 32)
+                            .overlay {
+                                Text("\(step.order + 1)")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                            }
+                        
+                        Text("Step \(step.order + 1)")
+                            .font(.headline)
+                            .foregroundColor(.black)
+                    }
+                    
+                    // Instructions
+                    Text(step.instructions ?? "")
+                        .font(.body)
+                        .lineSpacing(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Used ingredients
+                    if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "leaf.fill")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            
+                            Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
             }
         }
-        .padding(.vertical, 4)
+        .padding()
     }
     
     private func startNativeTimer(duration: StepDuration) {
@@ -264,19 +304,6 @@ struct RecipeDetailView: View {
                     // Fallback to Clock app if timer scheme fails
                     if let clockURL = URL(string: "clock:") {
                         UIApplication.shared.open(clockURL)
-                    }
-                }
-            }
-        }
-    }
-    
-    private var stepsSection: some View {
-        Group {
-            if !currentRecipe.stepsArray.isEmpty {
-                Section("Instructions") {
-                    ForEach(currentRecipe.stepsArray) { step in
-                        stepView(for: step)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -352,6 +379,9 @@ struct RecipeDetailView: View {
                         }
                         .padding()
                         
+                        // Steps section
+                        stepsSection
+                        
                         // Add padding at the bottom for the fixed button
                         Color.clear.frame(height: 100)
                     }
@@ -393,7 +423,11 @@ struct RecipeDetailView: View {
         .id(refreshID)
         .sheet(isPresented: $showingEditSheet) {
             NavigationStack {
-                EditRecipeView(recipe: recipe, rootDismiss: $shouldDismiss)
+                EditRecipeView(
+                    recipe: recipe,
+                    rootDismiss: $shouldDismiss,
+                    refreshID: $refreshID
+                )
             }
         }
         .onChange(of: shouldDismiss) { newValue in
@@ -503,4 +537,58 @@ private struct DifficultyPill: View {
         .background(difficulty.color)
         .clipShape(Capsule())
     }
+}
+
+#Preview {
+    let context = PersistenceController.preview.container.viewContext
+    
+    // Create a sample recipe
+    let recipe = Recipe(context: context)
+    recipe.name = "Spaghetti Carbonara"
+    recipe.desc = "A classic Italian pasta dish with eggs, cheese, pancetta, and black pepper."
+    recipe.timeInMinutes = 30
+    recipe.servings = 4
+    recipe.difficulty = Difficulty.medium.rawValue
+    
+    // Add some ingredients
+    let ingredients = [
+        ("Spaghetti", 400.0, "grams"),
+        ("Eggs", 4.0, "pieces"),
+        ("Pecorino Romano", 100.0, "grams"),
+        ("Pancetta", 150.0, "grams"),
+        ("Black Pepper", 2.0, "teaspoons")
+    ]
+    
+    for (name, quantity, unit) in ingredients {
+        let ingredient = Ingredient(context: context)
+        ingredient.name = name
+        
+        let recipeIngredient = RecipeIngredient(context: context)
+        recipeIngredient.ingredient = ingredient
+        recipeIngredient.recipe = recipe
+        recipeIngredient.quantity = quantity
+        recipeIngredient.unit = unit
+    }
+    
+    // Add some steps
+    let steps = [
+        "Bring a large pot of salted water to boil.",
+        "Cook spaghetti according to package instructions.",
+        "Meanwhile, cook pancetta until crispy.",
+        "Mix eggs, cheese, and pepper in a bowl.",
+        "Combine everything and serve immediately."
+    ]
+    
+    for (index, instructions) in steps.enumerated() {
+        let step = Step(context: context)
+        step.recipe = recipe
+        step.instructions = instructions
+        step.order = Int16(index)
+        step.createdAt = Date()
+    }
+    
+    try? context.save()
+    
+    return RecipeDetailView(recipe: recipe)
+        .environment(\.managedObjectContext, context)
 } 

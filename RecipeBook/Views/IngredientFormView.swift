@@ -12,7 +12,6 @@ struct IngredientFormView: View {
     
     @State private var name: String
     @State private var description: String
-    @State private var showingDeleteErrorAlert = false
     
     init(mode: IngredientFormMode) {
         self.mode = mode
@@ -27,10 +26,24 @@ struct IngredientFormView: View {
         }
     }
     
-    private var title: String {
-        switch mode {
-        case .add: return "New Ingredient"
-        case .edit: return "Edit Ingredient"
+    private var ingredientIcon: some View {
+        VStack(spacing: 24) {
+            // Icon circle
+            Circle()
+                .fill(Color.orange.opacity(0.1))
+                .frame(width: 100, height: 100)
+                .overlay {
+                    Image(systemName: "leaf.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 40))
+                }
+                .padding(.top, 40)
+            
+            // Name input
+            TextField("Ingredient Name", text: $name)
+                .font(.title)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
         }
     }
     
@@ -41,68 +54,68 @@ struct IngredientFormView: View {
         }
     }
     
+    private var toolbarButtons: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .foregroundColor(.black)
+                    .padding()
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.1), radius: 5)
+            }
+        }
+        .padding(.horizontal)
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Ingredient icon
-                    Circle()
-                        .fill(Color.orange.opacity(0.1))
-                        .frame(width: 120, height: 120)
-                        .overlay {
-                            Image(systemName: "leaf.fill")
-                                .font(.system(size: 48))
-                                .foregroundColor(.orange)
-                        }
-                        .padding(.top, 40)
-                    
-                    // Name input
-                    TextField("Ingredient Name", text: $name)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                    
-                    // Description section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Description")
-                            .font(.title2)
-                            .fontWeight(.bold)
+            ZStack(alignment: .top) {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        ingredientIcon
                         
-                        TextField("Add a description", text: $description, axis: .vertical)
-                            .lineLimit(3...6)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                    .padding()
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .principal) {
-                    Text(title)
-                        .font(.headline)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button(action: {
-                    save()
-                    dismiss()
-                }) {
-                    Text(buttonTitle)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
+                        // Description section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Description")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            TextEditor(text: $description)
+                                .frame(minHeight: 100, maxHeight: 200)
+                                .scrollContentBackground(.hidden)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                        }
                         .padding()
-                        .background(Color.black)
-                        .cornerRadius(12)
+                    }
                 }
-                .disabled(name.isEmpty)
-                .padding()
-                .background(.white)
+                .navigationBarHidden(true)
+                
+                VStack {
+                    toolbarButtons
+                        .padding(.top, 8)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        save()
+                        dismiss()
+                    }) {
+                        Text(buttonTitle)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black)
+                            .cornerRadius(12)
+                    }
+                    .disabled(name.isEmpty)
+                    .padding()
+                    .background(.white)
+                }
             }
         }
     }

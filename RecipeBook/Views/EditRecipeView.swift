@@ -5,6 +5,7 @@ struct EditRecipeView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.presentationMode) private var presentationMode
     @Binding var rootDismiss: Bool
+    @Binding var refreshID: UUID
     let recipe: Recipe
     
     @State private var name: String
@@ -17,7 +18,7 @@ struct EditRecipeView: View {
     @State private var activeSheet: EditRecipeSheet?
     @State private var showingDeleteAlert = false
     
-    init(recipe: Recipe, rootDismiss: Binding<Bool>) {
+    init(recipe: Recipe, rootDismiss: Binding<Bool>, refreshID: Binding<UUID>) {
         self.recipe = recipe
         _name = State(initialValue: recipe.name ?? "")
         _description = State(initialValue: recipe.desc ?? "")
@@ -48,16 +49,17 @@ struct EditRecipeView: View {
         }
         
         _rootDismiss = rootDismiss
+        _refreshID = refreshID
     }
     
     private var recipeImage: some View {
         VStack(spacing: 24) {
             // Circular image
             Group {
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
+                        if let image = image {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
                         .frame(width: 250, height: 250)
                         .clipShape(Circle())
                         .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
@@ -74,9 +76,9 @@ struct EditRecipeView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                Button {
-                    activeSheet = .imagePicker
-                } label: {
+                        Button {
+                            activeSheet = .imagePicker
+                        } label: {
                     Image(systemName: "camera.circle.fill")
                         .font(.system(size: 44))
                         .foregroundStyle(.white, Color.orange)
@@ -238,6 +240,11 @@ struct EditRecipeView: View {
         }
     }
     
+    // First, add a computed property for sorted steps
+    private var sortedSteps: [RecipeStep] {
+        steps.sorted { $0.order < $1.order }
+    }
+    
     var body: some View {
         ZStack(alignment: .top) {
             ScrollView {
@@ -252,7 +259,7 @@ struct EditRecipeView: View {
                         
                         TextEditor(text: $description)
                             .frame(minHeight: 100, maxHeight: 200)
-                            .padding(8)
+                            .scrollContentBackground(.hidden)
                             .background(Color(.systemGray6))
                             .cornerRadius(8)
                     }
@@ -267,24 +274,24 @@ struct EditRecipeView: View {
                         if selectedIngredients.isEmpty {
                             addIngredientsButton
                         } else {
-                            ForEach($selectedIngredients) { $ingredient in
+                    ForEach($selectedIngredients) { $ingredient in
                                 HStack {
-                                    Text(ingredient.ingredient.name ?? "")
+                            Text(ingredient.ingredient.name ?? "")
                                         .font(.body)
                                     
                                     Spacer()
                                     
                                     TextField("Qty", value: $ingredient.quantity, format: .number)
-                                        .keyboardType(.decimalPad)
+                                    .keyboardType(.decimalPad)
                                         .frame(width: 60)
                                         .multilineTextAlignment(.trailing)
                                     
-                                    Picker("Unit", selection: $ingredient.unit) {
-                                        ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
-                                            Text(unit.displayName).tag(unit)
-                                        }
+                                Picker("Unit", selection: $ingredient.unit) {
+                                    ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                        Text(unit.displayName).tag(unit)
                                     }
-                                    .pickerStyle(.menu)
+                                }
+                                .pickerStyle(.menu)
                                     .frame(width: 80)
                                 }
                                 .padding()
@@ -295,16 +302,84 @@ struct EditRecipeView: View {
                             }
                             
                             // Add more ingredients button
-                            Button {
-                                activeSheet = .ingredients
-                            } label: {
-                                HStack {
-                                    Image(systemName: "plus.circle.fill")
+                    Button {
+                        activeSheet = .ingredients
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
                                     Text("Add more ingredients")
                                 }
                                 .foregroundColor(.black)
                                 .padding()
                                 .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                    .padding()
+                    
+                    // Steps section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Steps")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        if steps.isEmpty {
+                            Button {
+                                activeSheet = .step(.add)
+                            } label: {
+                                VStack(spacing: 12) {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.1))
+                                        .frame(width: 60, height: 60)
+                                        .overlay {
+                                            Image(systemName: "plus")
+                                                .foregroundColor(.black)
+                                                .font(.system(size: 24))
+                                        }
+                                    
+                                    Text("Add Steps")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.black)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                        } else {
+                            ForEach(sortedSteps) { step in
+                                StepRowView(
+                                    step: .constant(step),
+                                    recipeIngredients: selectedIngredients
+                                ) {
+                                    activeSheet = .step(.edit(step))
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                            
+                            // Add more steps button
+                            Button {
+                                activeSheet = .step(.add)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Add more steps")
+                                }
+                                .foregroundColor(.black)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .stroke(Color.gray.opacity(0.2), lineWidth: 1)
@@ -326,8 +401,15 @@ struct EditRecipeView: View {
                 
                 Spacer()
                 
-                // Keep the bottom save button
-                VStack {
+                // Bottom save button with solid background
+                ZStack {
+                    // Solid background that extends to bottom safe area
+                    Rectangle()
+                        .fill(Color(.systemBackground))
+                        .edgesIgnoringSafeArea(.bottom)
+                        .frame(height: 100)
+                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                    
                     Button(action: {
                         saveRecipe()
                         dismiss()
@@ -343,47 +425,42 @@ struct EditRecipeView: View {
                     .disabled(name.isEmpty || selectedIngredients.isEmpty)
                     .padding()
                 }
-                .background(
-                    Rectangle()
-                        .fill(.white)
-                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
-                )
             }
         }
         .navigationBarHidden(true)
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .ingredients:
-                IngredientSelectionView(selectedIngredients: $selectedIngredients)
-            case .imagePicker:
-                ImagePicker(image: $image)
-            case .step(let stepSheet):
-                NavigationView {
-                    switch stepSheet {
-                    case .add:
-                        StepFormView(
-                            step: nil,
-                            recipeIngredients: selectedIngredients
-                        ) { newStep in
-                            steps.append(newStep)
-                            updateStepOrder()
-                            activeSheet = nil
-                        }
-                    case .edit(let step):
-                        StepFormView(
-                            step: step,
-                            recipeIngredients: selectedIngredients
-                        ) { newStep in
-                            if let index = steps.firstIndex(where: { $0.id == step.id }) {
-                                steps[index] = newStep
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .ingredients:
+                    IngredientSelectionView(selectedIngredients: $selectedIngredients)
+                case .imagePicker:
+                    ImagePicker(image: $image)
+                case .step(let stepSheet):
+                    NavigationView {
+                        switch stepSheet {
+                        case .add:
+                            StepFormView(
+                                step: nil,
+                                recipeIngredients: selectedIngredients
+                            ) { newStep in
+                                steps.append(newStep)
+                                updateStepOrder()
+                                activeSheet = nil
                             }
-                            updateStepOrder()
-                            activeSheet = nil
+                        case .edit(let step):
+                            StepFormView(
+                                step: step,
+                                recipeIngredients: selectedIngredients
+                            ) { newStep in
+                                if let index = steps.firstIndex(where: { $0.id == step.id }) {
+                                    steps[index] = newStep
+                                }
+                                updateStepOrder()
+                                activeSheet = nil
+                            }
                         }
                     }
                 }
             }
-        }
         // Add delete alert
         .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) {}
@@ -469,6 +546,7 @@ struct EditRecipeView: View {
             do {
                 try viewContext.save()
                 viewContext.refresh(recipe, mergeChanges: true)
+                refreshID = UUID()
             } catch {
                 print("Error saving recipe: \(error)")
             }
@@ -498,5 +576,68 @@ enum EditRecipeSheet: Identifiable {
         case .step(let stepSheet):
             return "step-\(stepSheet.id)"
         }
+    }
+}
+
+#Preview {
+    let context = PersistenceController.preview.container.viewContext
+    
+    // Create a sample recipe
+    let recipe = Recipe(context: context)
+    recipe.name = "Classic Pancakes"
+    recipe.desc = "Fluffy and delicious homemade pancakes perfect for breakfast."
+    recipe.timeInMinutes = 20
+    recipe.servings = 4
+    recipe.difficulty = Difficulty.easy.rawValue
+    
+    // Add some ingredients
+    let ingredients = [
+        ("All-purpose Flour", 200.0, "grams"),
+        ("Milk", 240.0, "ml"),
+        ("Eggs", 2.0, "pieces"),
+        ("Sugar", 30.0, "grams"),
+        ("Baking Powder", 10.0, "grams"),
+        ("Salt", 5.0, "grams"),
+        ("Butter", 30.0, "grams")
+    ]
+    
+    for (name, quantity, unit) in ingredients {
+        let ingredient = Ingredient(context: context)
+        ingredient.name = name
+        
+        let recipeIngredient = RecipeIngredient(context: context)
+        recipeIngredient.ingredient = ingredient
+        recipeIngredient.recipe = recipe
+        recipeIngredient.quantity = quantity
+        recipeIngredient.unit = unit
+    }
+    
+    // Add some steps
+    let steps = [
+        "In a large bowl, whisk together flour, sugar, baking powder, and salt.",
+        "In another bowl, whisk milk, eggs, and melted butter.",
+        "Pour wet ingredients into dry ingredients and mix until just combined.",
+        "Heat a non-stick pan over medium heat.",
+        "Pour 1/4 cup batter for each pancake and cook until bubbles form.",
+        "Flip and cook other side until golden brown."
+    ]
+    
+    for (index, instructions) in steps.enumerated() {
+        let step = Step(context: context)
+        step.recipe = recipe
+        step.instructions = instructions
+        step.order = Int16(index)
+        step.createdAt = Date()
+    }
+    
+    try? context.save()
+    
+    return NavigationStack {
+        EditRecipeView(
+            recipe: recipe,
+            rootDismiss: .constant(false),
+            refreshID: .constant(UUID())
+        )
+        .environment(\.managedObjectContext, context)
     }
 } 

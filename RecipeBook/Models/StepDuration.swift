@@ -3,12 +3,18 @@ import Foundation
 struct StepDuration {
     let hours: Int
     let minutes: Int
-    let seconds: Int
     let originalText: String
     let range: Range<String.Index>
     
     var totalSeconds: Int {
-        hours * 3600 + minutes * 60 + seconds
+        (hours * 60 * 60) + (minutes * 60)
+    }
+    
+    var displayString: String {
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes) min"
     }
     
     static func detect(in text: String) -> StepDuration? {
@@ -69,7 +75,6 @@ struct StepDuration {
         return StepDuration(
             hours: foundHours,
             minutes: foundMinutes,
-            seconds: foundSeconds,
             originalText: String(text[range]),
             range: range
         )
@@ -79,7 +84,6 @@ struct StepDuration {
         var components: [String] = []
         if hours > 0 { components.append("\(hours)h") }
         if minutes > 0 { components.append("\(minutes)m") }
-        if seconds > 0 { components.append("\(seconds)s") }
         return components.joined(separator: " ")
     }
 } 

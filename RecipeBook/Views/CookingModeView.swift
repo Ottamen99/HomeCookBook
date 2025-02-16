@@ -145,6 +145,7 @@ struct CookingModeView: View {
                                                 .multilineTextAlignment(.leading)
                                             
                                             if isCurrent {
+                                                // Only keep the complete/incomplete button
                                                 Button {
                                                     handleStepComplete(step, completed: !isCompleted)
                                                 } label: {

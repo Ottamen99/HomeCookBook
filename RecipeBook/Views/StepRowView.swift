@@ -30,61 +30,18 @@ struct StepRowView: View {
 }
 
 #Preview {
-    @MainActor func createPreview() -> some View {
-        let step = RecipeStep(
+    StepRowView(
+        step: .constant(RecipeStep(
             id: UUID(),
             instructions: "In a large bowl, whisk together flour, sugar, baking powder, and salt until well combined.",
-            selectedIngredients: [
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "All-purpose Flour"),
-                    quantity: 200,
-                    unit: .grams
-                ),
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "Sugar"),
-                    quantity: 50,
-                    unit: .grams
-                ),
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "Baking Powder"),
-                    quantity: 10,
-                    unit: .grams
-                )
-            ],
+            selectedIngredients: [],
             order: 0
-        )
-        
-        return StepRowView(
-            step: .constant(step),
-            recipeIngredients: [
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "All-purpose Flour"),
-                    quantity: 200,
-                    unit: .grams
-                ),
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "Sugar"),
-                    quantity: 50,
-                    unit: .grams
-                ),
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "Baking Powder"),
-                    quantity: 10,
-                    unit: .grams
-                ),
-                SelectedIngredient(
-                    ingredient: PreviewData.createIngredient(name: "Salt"),
-                    quantity: 5,
-                    unit: .grams
-                )
-            ]
-        ) {
-            // Empty action for preview
-        }
-        .padding()
+        )),
+        recipeIngredients: PreviewData.sampleIngredients
+    ) {
+        // Empty action for preview
     }
-    
-    return createPreview()
+    .padding()
 }
 
 // Update PreviewData helper to be MainActor-isolated
@@ -95,5 +52,30 @@ enum PreviewData {
         let ingredient = Ingredient(context: context)
         ingredient.name = name
         return ingredient
+    }
+    
+    static var sampleIngredients: [SelectedIngredient] {
+        [
+            SelectedIngredient(
+                ingredient: createIngredient(name: "All-purpose Flour"),
+                quantity: 200,
+                unit: .grams
+            ),
+            SelectedIngredient(
+                ingredient: createIngredient(name: "Sugar"),
+                quantity: 50,
+                unit: .grams
+            ),
+            SelectedIngredient(
+                ingredient: createIngredient(name: "Baking Powder"),
+                quantity: 10,
+                unit: .grams
+            ),
+            SelectedIngredient(
+                ingredient: createIngredient(name: "Salt"),
+                quantity: 5,
+                unit: .grams
+            )
+        ]
     }
 } 

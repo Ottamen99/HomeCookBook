@@ -70,10 +70,38 @@ struct IngredientFormView: View {
         .padding(.horizontal)
     }
     
+    private var formTitle: String {
+        switch mode {
+        case .add: return "New Ingredient"
+        case .edit: return "Edit Ingredient"
+        }
+    }
+    
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                ScrollView {
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Back button row
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(.black)
+                                .padding()
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .shadow(color: .black.opacity(0.1), radius: 5)
+                        }
+                        
+                        Text(formTitle)
+                            .font(.headline)
+                            .padding(.leading, 8)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    
+                    // Rest of the content
                     VStack(spacing: 24) {
                         ingredientIcon
                         
@@ -92,19 +120,21 @@ struct IngredientFormView: View {
                         .padding()
                     }
                 }
-                .navigationBarHidden(true)
+            }
+            
+            // Bottom save button
+            VStack {
+                Spacer()
                 
-                VStack {
-                    toolbarButtons
-                        .padding(.top, 8)
+                ZStack {
+                    Rectangle()
+                        .fill(Color(.systemBackground))
+                        .edgesIgnoringSafeArea(.bottom)
+                        .frame(height: 100)
+                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
                     
-                    Spacer()
-                    
-                    Button(action: {
-                        save()
-                        dismiss()
-                    }) {
-                        Text(buttonTitle)
+                    Button(action: save) {
+                        Text("Save Ingredient")
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -114,10 +144,10 @@ struct IngredientFormView: View {
                     }
                     .disabled(name.isEmpty)
                     .padding()
-                    .background(.white)
                 }
             }
         }
+        .navigationBarHidden(true)
     }
     
     private func save() {

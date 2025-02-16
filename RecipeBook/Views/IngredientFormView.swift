@@ -116,9 +116,14 @@ struct IngredientFormView: View {
                                 .scrollContentBackground(.hidden)
                                 .background(Color(.systemGray6))
                                 .cornerRadius(8)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding()
+                        .frame(maxWidth: .infinity)
                     }
+                    
+                    // Add some bottom padding for the save button
+                    Color.clear.frame(height: 100)
                 }
             }
             

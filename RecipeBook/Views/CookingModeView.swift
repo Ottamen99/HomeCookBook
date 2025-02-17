@@ -326,4 +326,4 @@ extension View {
     func backgroundStyle() -> some View {
         modifier(BackgroundStyleModifier())
     }
-} 
+}

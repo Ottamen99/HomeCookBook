@@ -33,12 +33,14 @@ struct IngredientSelectionView: View {
             Spacer()
             
             Button {
-                showingAddSheet = true
+                dismiss()
             } label: {
-                Image(systemName: "plus")
-                    .foregroundColor(.black)
-                    .padding()
-                    .background(Color.white)
+                Text("Done")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.orange)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .shadow(color: .black.opacity(0.1), radius: 5)
             }
@@ -77,25 +79,25 @@ struct IngredientSelectionView: View {
                             } label: {
                                 VStack(spacing: 12) {
                                     Circle()
-                                        .fill(isSelected ? Color.black.opacity(0.1) : Color.gray.opacity(0.1))
+                                        .fill(isSelected ? Color.orange.opacity(0.1) : Color.gray.opacity(0.1))
                                         .frame(width: 60, height: 60)
                                         .overlay {
                                             Image(systemName: "leaf.fill")
-                                                .foregroundColor(isSelected ? .black : .gray)
+                                                .foregroundColor(isSelected ? .orange : .gray)
                                                 .font(.system(size: 24))
                                         }
                                     
                                     Text(ingredient.name ?? "")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .foregroundColor(isSelected ? .black : .gray)
+                                        .foregroundColor(isSelected ? .orange : .gray)
                                         .multilineTextAlignment(.center)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isSelected ? Color.black.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
+                                        .stroke(isSelected ? Color.orange.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
                                 )
                             }
                         }
@@ -113,11 +115,6 @@ struct IngredientSelectionView: View {
             }
         }
         .navigationBarHidden(true)
-        .sheet(isPresented: $showingAddSheet) {
-            NavigationStack {
-                IngredientFormView(mode: .add)
-            }
-        }
     }
     
     private func toggleIngredient(_ ingredient: Ingredient) {

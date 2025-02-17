@@ -31,31 +31,39 @@ public struct StepTimelineView: View {
             VStack(spacing: 0) {
                 if !isFirst {
                     Rectangle()
-                        .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
+                        .fill(isCompleted ? Color.orange : Color.gray.opacity(0.3))
                         .frame(width: 2)
                         .frame(height: 20)
                 }
                 
                 Circle()
-                    .stroke(isCompleted ? .green : (isActive ? .blue : .gray), lineWidth: 2)
-                    .background(Circle().fill(isCompleted ? .green : (isActive ? .blue : .gray)))
-                    .frame(width: 24, height: 24)
+                    .fill(isCompleted ? .orange : (isActive ? .orange : .gray.opacity(0.1)))
+                    .frame(width: 32, height: 32)
                     .overlay {
                         if isCompleted {
                             Image(systemName: "checkmark")
                                 .foregroundColor(.white)
-                                .font(.system(size: 12, weight: .bold))
-                        } else if isActive {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 8, height: 8)
+                                .font(.system(size: 14, weight: .bold))
+                        } else {
+                            Text("\(step.order + 1)")
+                                .foregroundColor(isActive ? .white : .gray)
+                                .font(.system(size: 14, weight: .bold))
                         }
                     }
-                    .shadow(color: .clear, radius: 4)
+                    .overlay {
+                        Circle()
+                            .stroke(
+                                isCompleted ? .orange : 
+                                (isActive ? .orange : 
+                                 (canComplete ? .orange.opacity(0.5) : .gray.opacity(0.3))),
+                                lineWidth: 3
+                            )
+                    }
+                    .shadow(color: isActive ? Color.orange.opacity(0.3) : .clear, radius: 4)
                 
                 if !isLast {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(isCompleted ? Color.orange : Color.gray.opacity(0.3))
                         .frame(width: 2)
                         .frame(height: 20)
                 }
@@ -66,7 +74,7 @@ public struct StepTimelineView: View {
                 HStack {
                     Text("Step \(step.order + 1)")
                         .font(.headline)
-                        .foregroundColor(isCompleted ? .green : (canComplete ? .blue : .gray))
+                        .foregroundColor(isCompleted ? .orange : (canComplete ? .orange : .gray))
                     
                     Spacer()
                     
@@ -75,7 +83,7 @@ public struct StepTimelineView: View {
                             onToggleComplete(!isCompleted)
                         } label: {
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(isCompleted ? .green : .gray)
+                                .foregroundColor(isCompleted ? .orange : .gray)
                                 .font(.system(size: 24))
                         }
                     } else {
@@ -89,13 +97,22 @@ public struct StepTimelineView: View {
                     .foregroundColor(isCompleted ? .secondary : (canComplete ? .primary : .gray))
                 
                 if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
-                    Text("Uses: " + ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(4)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(ingredients).sorted(by: { ($0.ingredient?.name ?? "") < ($1.ingredient?.name ?? "") })) { ingredient in
+                            HStack(spacing: 8) {
+                                Image(systemName: "leaf.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.orange.opacity(0.8))
+                                Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "") \(ingredient.ingredient?.name ?? "")")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
                 }
                 
                 timerButton
@@ -115,7 +132,9 @@ public struct StepTimelineView: View {
                 #endif
             }
         }
-        .background(isActive && canComplete ? Color.blue.opacity(0.05) : Color.clear)
+        .padding(.horizontal)
+        .padding(.top, 4)
+        .background(isActive && canComplete ? Color.orange.opacity(0.05) : Color.clear)
         .cornerRadius(8)
     }
 }
@@ -148,16 +167,16 @@ private struct StepTimerView: View {
             } label: {
                 HStack {
                     Image(systemName: isRunning ? "pause.fill" : "play.fill")
-                        .foregroundColor(timeRemaining > 0 ? .blue : .green)
+                        .foregroundColor(timeRemaining > 0 ? .orange : .green)
                     
                     Text(formatTime(timeRemaining))
                         .monospacedDigit()
-                        .foregroundColor(timeRemaining > 0 ? .blue : .green)
+                        .foregroundColor(timeRemaining > 0 ? .orange : .green)
                         .fontWeight(.medium)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
+                .background(Color.orange.opacity(0.1))
                 .cornerRadius(8)
             }
             .disabled(timeRemaining <= 0)
@@ -167,9 +186,9 @@ private struct StepTimerView: View {
                     resetTimer()
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.orange)
                         .padding(8)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.orange.opacity(0.1))
                         .clipShape(Circle())
                 }
             }

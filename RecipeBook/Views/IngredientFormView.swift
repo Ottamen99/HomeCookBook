@@ -170,6 +170,7 @@ struct IngredientFormView: View {
         }
         
         try? viewContext.save()
+        dismiss()
     }
 }
 

@@ -21,8 +21,16 @@
         <attribute name="name" attributeType="String"/>
         <attribute name="servings" attributeType="Integer 16" defaultValueString="2" usesScalarValueType="YES"/>
         <attribute name="timeInMinutes" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="recipeBook" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="RecipeBook" inverseName="recipes" inverseEntity="RecipeBook"/>
         <relationship name="recipeIngredients" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="RecipeIngredient" inverseName="recipe" inverseEntity="RecipeIngredient"/>
         <relationship name="steps" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Step" inverseName="recipe" inverseEntity="Step"/>
+    </entity>
+    <entity name="RecipeBook" representedClassName="RecipeBook" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="recipes" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Recipe" inverseName="recipeBook" inverseEntity="Recipe"/>
     </entity>
     <entity name="RecipeIngredient" representedClassName="RecipeIngredient" syncable="YES" codeGenerationType="class">
         <attribute name="quantity" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>

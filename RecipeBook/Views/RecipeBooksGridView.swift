@@ -54,8 +54,7 @@ struct RecipeBooksGridView: View {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(recipeBooks, id: \.self) { book in
                             NavigationLink {
-                                // TODO: Implement RecipeBookDetailView
-                                Text(book.value(forKey: "name") as? String ?? "")
+                                RecipeBookDetailView(recipeBook: book)
                             } label: {
                                 RecipeBookTile(recipeBook: book)
                             }

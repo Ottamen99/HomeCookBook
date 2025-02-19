@@ -101,6 +101,7 @@ struct EditRecipeView: View {
                     Button(action: {
                         if timeInMinutes > 1 {
                             timeInMinutes -= 1
+                            updateTimeInMinutes()
                         }
                     }) {
                         Image(systemName: "minus")
@@ -121,8 +122,9 @@ struct EditRecipeView: View {
                     .frame(width: 50)
                     
                     Button(action: {
-                        if timeInMinutes < 20 {
+                        if timeInMinutes < 480 {
                             timeInMinutes += 1
+                            updateTimeInMinutes()
                         }
                     }) {
                         Image(systemName: "plus")
@@ -140,6 +142,7 @@ struct EditRecipeView: View {
                     Button(action: { 
                         if servings > 1 {
                             servings -= 1
+                            updateServings()
                         }
                     }) {
                         Image(systemName: "minus")
@@ -162,6 +165,7 @@ struct EditRecipeView: View {
                     Button(action: { 
                         if servings < 20 {
                             servings += 1
+                            updateServings()
                         }
                     }) {
                         Image(systemName: "plus")
@@ -559,6 +563,24 @@ struct EditRecipeView: View {
         try? viewContext.save()
         dismiss()  // Dismiss the edit sheet
         rootDismiss = true  // Trigger dismiss of the detail view
+    }
+    
+    private func updateServings() {
+        viewContext.perform {
+            recipe.servings = servings
+            try? viewContext.save()
+            viewContext.refresh(recipe, mergeChanges: true)
+            refreshID = UUID()  // This will trigger a refresh of the view
+        }
+    }
+    
+    private func updateTimeInMinutes() {
+        viewContext.perform {
+            recipe.timeInMinutes = timeInMinutes
+            try? viewContext.save()
+            viewContext.refresh(recipe, mergeChanges: true)
+            refreshID = UUID()  // This will trigger a refresh of the view
+        }
     }
 }
 

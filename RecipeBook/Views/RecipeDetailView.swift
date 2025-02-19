@@ -425,6 +425,7 @@ struct RecipeDetailView: View {
         .id(refreshID)
         .sheet(isPresented: $showingEditSheet, onDismiss: {
             viewContext.refresh(recipe, mergeChanges: true)
+            servings = recipe.servings
             refreshID = UUID()
         }) {
             NavigationStack {
@@ -453,11 +454,13 @@ struct RecipeDetailView: View {
         } message: {
             Text("Are you sure you want to delete this recipe? This action cannot be undone.")
         }
-        .onChange(of: recipe) { _ in
-            servings = recipe.servings
+        .onChange(of: recipe) { newRecipe in
+            servings = newRecipe.servings
+            refreshID = UUID()
         }
         .onAppear {
             servings = recipe.servings
+            refreshID = UUID()
         }
         .onDisappear {
             refreshID = UUID()
@@ -502,6 +505,11 @@ struct RecipeDetailView: View {
             viewContext.refresh(recipe, mergeChanges: true)
             refreshID = UUID()
         }
+    }
+    
+    private func updateLocalState() {
+        servings = recipe.servings
+        refreshID = UUID()
     }
 }
 

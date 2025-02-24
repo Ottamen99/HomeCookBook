@@ -2,8 +2,6 @@
 
 A beautiful and intuitive iOS app for managing your recipes and organizing them into collections.
 
-<img src="screenshots/recipe-books.png" width="300"> <img src="screenshots/recipe-detail.png" width="300">
-
 ## Features
 
 ### 🥘 Recipe Management

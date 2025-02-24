@@ -5,7 +5,7 @@ struct RecipeDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.presentationMode) private var presentationMode
-    let recipe: Recipe  // Change back to let
+    @ObservedObject var recipe: Recipe  // Change to @ObservedObject
     
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
@@ -29,6 +29,7 @@ struct RecipeDetailView: View {
     
     init(recipe: Recipe) {
         self.recipe = recipe
+        // Initialize servings with recipe's value
         _servings = State(initialValue: recipe.servings)
         
         // Initialize FetchRequest
@@ -49,13 +50,9 @@ struct RecipeDetailView: View {
         )
     }
     
-    private var currentRecipe: Recipe {
-        recipe
-    }
-    
     private var recipeStats: some View {
         HStack(spacing: 40) {
-            StatView(value: "\(currentRecipe.timeInMinutes)", label: "min")
+            StatView(value: "\(recipe.timeInMinutes)", label: "min")
             StatView(value: "\(String(format: "%.0f", 270))", label: "grams") // Hardcoded for now
             StatView(value: "\(servings)", label: "serve")
         }
@@ -92,7 +89,7 @@ struct RecipeDetailView: View {
     
     private var recipeImage: some View {
         Group {
-            if let imageData = currentRecipe.imageData,
+            if let imageData = recipe.imageData,
                let uiImage = UIImage(data: imageData) {
                 VStack(spacing: 24) {
                     // Circular image
@@ -106,25 +103,26 @@ struct RecipeDetailView: View {
                         .padding(.top, 40)
                     
                     // Recipe name
-                    Text(currentRecipe.name ?? "")
+                    Text(recipe.name ?? "")
                         .font(.title)
                         .fontWeight(.bold)
                     
                     // Stats row
                     HStack(spacing: 40) {
                         
-                        if let difficultyString = currentRecipe.difficulty,
+                        if let difficultyString = recipe.difficulty,
                            let difficulty = Difficulty(rawValue: difficultyString) {
                             DifficultyPill(difficulty: difficulty)
                         }
                         
-                        StatView(value: "25", label: "min")
+                        StatView(value: "\(recipe.timeInMinutes)", label: "min")
                         
                         // Servings control
                         HStack(spacing: 4) {
                             Button(action: { 
                                 if servings > 1 {
                                     servings -= 1
+                                    updateServings()
                                 }
                             }) {
                                 Image(systemName: "minus")
@@ -147,6 +145,7 @@ struct RecipeDetailView: View {
                             Button(action: { 
                                 if servings < 20 {
                                     servings += 1
+                                    updateServings()
                                 }
                             }) {
                                 Image(systemName: "plus")
@@ -174,7 +173,7 @@ struct RecipeDetailView: View {
         HStack {
             Image(systemName: "clock")
                 .foregroundColor(.blue)
-            Text("\(currentRecipe.timeInMinutes) minutes")
+            Text("\(recipe.timeInMinutes) minutes")
         }
     }
     
@@ -183,6 +182,9 @@ struct RecipeDetailView: View {
             Image(systemName: "person.2")
                 .foregroundColor(.blue)
             Stepper("Servings: \(servings)", value: $servings, in: 1...20)
+                .onChange(of: servings) { _ in
+                    updateServings()
+                }
         }
     }
     
@@ -197,7 +199,7 @@ struct RecipeDetailView: View {
     
     private var recipeDescription: some View {
         Group {
-            if let description = currentRecipe.desc, !description.isEmpty {
+            if let description = recipe.desc, !description.isEmpty {
                 Section("Description") {
                     Text(description)
                         .lineSpacing(4)
@@ -207,7 +209,7 @@ struct RecipeDetailView: View {
     }
     
     private func ingredientView(for recipeIngredient: RecipeIngredient) -> some View {
-        let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
+        let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
         return HStack {
             if let ingredient = recipeIngredient.ingredient {
                 Text(ingredient.name ?? "")
@@ -237,7 +239,7 @@ struct RecipeDetailView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            ForEach(currentRecipe.stepsArray) { step in
+            ForEach(recipe.stepsArray) { step in
                 VStack(alignment: .leading, spacing: 12) {
                     // Step header
                     HStack {
@@ -362,7 +364,7 @@ struct RecipeDetailView: View {
                                 .fontWeight(.bold)
                             
                             ForEach(ingredients) { recipeIngredient in
-                                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
+                                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
                                 HStack {
                                     if let ingredient = recipeIngredient.ingredient {
                                         Text(ingredient.name ?? "")
@@ -421,7 +423,11 @@ struct RecipeDetailView: View {
             .toolbar(.hidden, for: .tabBar)
         }
         .id(refreshID)
-        .sheet(isPresented: $showingEditSheet) {
+        .sheet(isPresented: $showingEditSheet, onDismiss: {
+            viewContext.refresh(recipe, mergeChanges: true)
+            servings = recipe.servings
+            refreshID = UUID()
+        }) {
             NavigationStack {
                 EditRecipeView(
                     recipe: recipe,
@@ -448,10 +454,21 @@ struct RecipeDetailView: View {
         } message: {
             Text("Are you sure you want to delete this recipe? This action cannot be undone.")
         }
+        .onChange(of: recipe) { newRecipe in
+            servings = newRecipe.servings
+            refreshID = UUID()
+        }
+        .onAppear {
+            servings = recipe.servings
+            refreshID = UUID()
+        }
+        .onDisappear {
+            refreshID = UUID()
+        }
     }
     
     private func deleteRecipe() {
-        viewContext.delete(currentRecipe)
+        viewContext.delete(recipe)
         try? viewContext.save()
         dismiss()
     }
@@ -463,7 +480,7 @@ struct RecipeDetailView: View {
                 .font(.headline)
             
             ForEach(ingredients) { recipeIngredient in
-                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(currentRecipe.servings)
+                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
                 HStack {
                     if let ingredient = recipeIngredient.ingredient {
                         Text(ingredient.name ?? "")
@@ -480,11 +497,27 @@ struct RecipeDetailView: View {
         }
         .padding(.vertical)
     }
+    
+    private func updateServings() {
+        viewContext.perform {
+            recipe.servings = servings
+            try? viewContext.save()
+            viewContext.refresh(recipe, mergeChanges: true)
+            refreshID = UUID()
+        }
+    }
+    
+    private func updateLocalState() {
+        servings = recipe.servings
+        refreshID = UUID()
+    }
 }
 
 // Add these supporting views
 private struct ServingsControlView: View {
     @Binding var servings: Int16
+    let recipe: Recipe  // Add this
+    @Environment(\.managedObjectContext) private var viewContext
     
     var body: some View {
         HStack {
@@ -492,6 +525,7 @@ private struct ServingsControlView: View {
             Button(action: { 
                 if servings > 1 {
                     servings -= 1
+                    updateServings()
                 }
             }) {
                 Image(systemName: "minus")
@@ -508,6 +542,7 @@ private struct ServingsControlView: View {
             Button(action: { 
                 if servings < 20 {
                     servings += 1
+                    updateServings()
                 }
             }) {
                 Image(systemName: "plus")
@@ -518,6 +553,14 @@ private struct ServingsControlView: View {
             Spacer()
         }
         .padding(.vertical, 8)
+    }
+    
+    private func updateServings() {
+        viewContext.perform {
+            recipe.servings = servings
+            try? viewContext.save()
+            viewContext.refresh(recipe, mergeChanges: true)
+        }
     }
 }
 

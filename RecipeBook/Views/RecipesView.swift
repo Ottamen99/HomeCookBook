@@ -89,7 +89,7 @@ struct RecipesView: View {
 }
 
 struct RecipeRowView: View {
-    let recipe: Recipe
+    @ObservedObject var recipe: Recipe
     
     var body: some View {
         HStack(spacing: 12) {

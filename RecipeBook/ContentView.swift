@@ -32,6 +32,11 @@ struct ContentView: View {
                     Label("Recipes", systemImage: "book")
                 }
 
+            RecipeBooksGridView()
+                .tabItem {
+                    Label("Recipe Books", systemImage: "books.vertical.fill")
+                }
+
             /*PantryView()
                 .tabItem {
                     Label("My Pantry", systemImage: "basket.fill")

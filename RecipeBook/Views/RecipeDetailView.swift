@@ -480,7 +480,6 @@ struct RecipeDetailView: View {
                 .font(.headline)
             
             ForEach(ingredients) { recipeIngredient in
-                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
                 HStack {
                     if let ingredient = recipeIngredient.ingredient {
                         Text(ingredient.name ?? "")
@@ -488,7 +487,7 @@ struct RecipeDetailView: View {
                         
                         Spacer()
                         
-                        Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
+                        Text(String(format: "%.1f %@", recipeIngredient.quantity, recipeIngredient.unit ?? ""))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -499,11 +498,29 @@ struct RecipeDetailView: View {
     }
     
     private func updateServings() {
-        viewContext.perform {
-            recipe.servings = servings
-            try? viewContext.save()
-            viewContext.refresh(recipe, mergeChanges: true)
-            refreshID = UUID()
+        let oldServings = recipe.servings
+        let newServings = servings
+        let ratio = Double(newServings) / Double(oldServings)
+        
+        viewContext.performAndWait {
+            // Update recipe servings first
+            recipe.servings = newServings
+            
+            // Update ingredient quantities
+            for ingredient in ingredients {
+                let baseQuantity = ingredient.quantity / Double(oldServings)
+                ingredient.quantity = baseQuantity * Double(newServings)
+            }
+            
+            do {
+                try viewContext.save()
+                viewContext.refresh(recipe, mergeChanges: false)
+                refreshID = UUID()
+            } catch {
+                print("Error updating servings: \(error)")
+                // Revert on failure
+                servings = oldServings
+            }
         }
     }
     

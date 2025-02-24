@@ -46,6 +46,11 @@ struct ContentView: View {
                 .tabItem {
                     Label("Ingredients", systemImage: "leaf")
                 }
+            
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
         }
         .environmentObject(viewModel)
     }

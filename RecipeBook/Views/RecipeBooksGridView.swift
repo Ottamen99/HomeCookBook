@@ -86,20 +86,19 @@ struct RecipeBooksGridView: View {
 struct RecipeBookTile: View {
     let recipeBook: NSManagedObject
     
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Circle()
-                .fill(Color.orange.opacity(0.1))
-                .frame(height: 100)
-                .overlay {
-                    Image(systemName: "book.closed.fill")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 32))
-                }
-            
             VStack(alignment: .leading, spacing: 4) {
                 Text(recipeBook.value(forKey: "name") as? String ?? "")
                     .font(.headline)
+                    .foregroundColor(.orange)
                     .lineLimit(1)
                 
                 HStack(spacing: 4) {
@@ -109,15 +108,15 @@ struct RecipeBookTile: View {
                     
                     Spacer()
                     
-                    if let updatedAt = recipeBook.value(forKey: "updatedAt") as? Date {
-                        Text(updatedAt, style: .relative)
+                    if let createdAt = recipeBook.value(forKey: "createdAt") as? Date {
+                        Text(formatDate(createdAt))
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.secondary.opacity(0.8))
                     }
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.bottom, 12)
+            .padding(.vertical, 12)
         }
         .background(Color(.systemBackground))
         .cornerRadius(12)

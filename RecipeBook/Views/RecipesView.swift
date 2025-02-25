@@ -113,6 +113,7 @@ struct RecipeRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(recipe.name ?? "")
                     .font(.headline)
+                    .foregroundColor(.orange)
                 HStack(spacing: 12) {
                     Label("\(recipe.timeInMinutes) min", systemImage: "clock")
                     Label("\(recipe.servings) servings", systemImage: "person.2")

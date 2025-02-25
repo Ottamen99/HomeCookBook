@@ -109,7 +109,7 @@ struct RecipeBookDetailView: View {
                             Button {
                                 showingAddRecipesSheet = true
                             } label: {
-                                Label("Add Recipes", systemImage: "plus.circle.fill")
+                                Label("Manage Recipes", systemImage: "plus.circle.fill")
                                     .font(.system(size: 14))
                                     .fontWeight(.semibold)
                                     .foregroundColor(.white)
@@ -130,12 +130,11 @@ struct RecipeBookDetailView: View {
                             .padding()
                         } else {
                             ForEach(sortedRecipes, id: \.self) { recipe in
+                                let castedRecipe = recipe as! Recipe
                                 NavigationLink {
-                                    if let recipe = recipe as? Recipe {
-                                        RecipeDetailView(recipe: recipe)
-                                    }
+                                    RecipeDetailView(recipe: castedRecipe)
                                 } label: {
-                                    RecipeRowView(recipe: recipe as! Recipe)
+                                    RecipeRowView(recipe: castedRecipe)
                                         .padding(.horizontal)
                                 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {

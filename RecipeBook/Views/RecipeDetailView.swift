@@ -4,8 +4,8 @@ import CoreData
 struct RecipeDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.presentationMode) private var presentationMode
-    @ObservedObject var recipe: Recipe  // Change to @ObservedObject
+    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject var recipe: Recipe
     
     @State private var showingEditSheet = false
     @State private var showingDeleteAlert = false
@@ -13,7 +13,8 @@ struct RecipeDetailView: View {
     @State private var refreshID = UUID()
     @State private var showingCookingMode = false
     @State private var scrollOffset: CGFloat = 0
-    private let imageHeight: CGFloat = 300
+    @State private var shouldDismiss = false
+    @AccessibilityFocusState private var isHeaderFocused: Bool
     
     // Add FetchRequest for ingredients
     @FetchRequest private var ingredients: FetchedResults<RecipeIngredient>
@@ -23,9 +24,6 @@ struct RecipeDetailView: View {
         entity: Ingredient.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)]
     ) private var allIngredients: FetchedResults<Ingredient>
-    
-    @State private var path = NavigationPath()
-    @State private var shouldDismiss = false
     
     init(recipe: Recipe) {
         self.recipe = recipe
@@ -50,378 +48,45 @@ struct RecipeDetailView: View {
         )
     }
     
-    private var recipeStats: some View {
-        HStack(spacing: 40) {
-            StatView(value: "\(recipe.timeInMinutes)", label: "min")
-            StatView(value: "\(String(format: "%.0f", 270))", label: "grams") // Hardcoded for now
-            StatView(value: "\(servings)", label: "serve")
-        }
-    }
+    // MARK: - Main View
     
-    private struct StatView: View {
-        let value: String
-        let label: String
-        
-        var body: some View {
-            VStack(spacing: 4) {
-                Text(value)
-                    .fontWeight(.semibold)
-                Text(label)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-        }
-    }
-    
-    private var recipeTags: some View {
-        HStack(spacing: 12) {
-            ForEach(["Lunch", "Shrimps", "Easy"], id: \.self) { tag in
-                Text(tag)
-                    .font(.subheadline)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.orange.opacity(0.1))
-                    .foregroundColor(.orange)
-                    .clipShape(Capsule())
-            }
-        }
-    }
-    
-    private var recipeImage: some View {
-        Group {
-            if let imageData = recipe.imageData,
-               let uiImage = UIImage(data: imageData) {
-                VStack(spacing: 24) {
-                    // Circular image
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 250, height: 250)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
-                        .shadow(color: .black.opacity(0.1), radius: 8)
-                        .padding(.top, 40)
-                    
-                    // Recipe name
-                    Text(recipe.name ?? "")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    // Stats row
-                    HStack(spacing: 40) {
-                        
-                        if let difficultyString = recipe.difficulty,
-                           let difficulty = Difficulty(rawValue: difficultyString) {
-                            DifficultyPill(difficulty: difficulty)
-                        }
-                        
-                        StatView(value: "\(recipe.timeInMinutes)", label: "min")
-                        
-                        // Servings control
-                        HStack(spacing: 4) {
-                            Button(action: { 
-                                if servings > 1 {
-                                    servings -= 1
-                                    updateServings()
-                                }
-                            }) {
-                                Image(systemName: "minus")
-                                    .foregroundColor(.black)
-                                    .frame(width: 20, height: 20)
-                                    .padding(8)
-                                    .background(Color.gray.opacity(0.1))
-                                    .clipShape(Circle())
-                            }
-                            
-                            VStack {
-                                Text("\(servings)")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                Text("serve")
-                                    .foregroundColor(.gray)
-                            }
-                            .frame(width: 50)
-                            
-                            Button(action: { 
-                                if servings < 20 {
-                                    servings += 1
-                                    updateServings()
-                                }
-                            }) {
-                                Image(systemName: "plus")
-                                    .foregroundColor(.black)
-                                    .frame(width: 20, height: 20)
-                                    .padding(8)
-                                    .background(Color.gray.opacity(0.1))
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .font(.body)
-                    }
-                    .padding()
-                    .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(.gray, lineWidth: 0.5)
-                        )
-                }
-                .padding(.bottom, 20)
-            }
-        }
-    }
-    
-    private var timeView: some View {
-        HStack {
-            Image(systemName: "clock")
-                .foregroundColor(.blue)
-            Text("\(recipe.timeInMinutes) minutes")
-        }
-    }
-    
-    private var servingsView: some View {
-        HStack {
-            Image(systemName: "person.2")
-                .foregroundColor(.blue)
-            Stepper("Servings: \(servings)", value: $servings, in: 1...20)
-                .onChange(of: servings) { oldValue, newValue in
-                    updateServings()
-                }
-        }
-    }
-    
-    private var recipeDetails: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                timeView
-                servingsView
-            }
-        }
-    }
-    
-    private var recipeDescription: some View {
-        Group {
-            if let description = recipe.desc, !description.isEmpty {
-                Section("Description") {
-                    Text(description)
-                        .lineSpacing(4)
-                }
-            }
-        }
-    }
-    
-    private func ingredientView(for recipeIngredient: RecipeIngredient) -> some View {
-        let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
-        return HStack {
-            if let ingredient = recipeIngredient.ingredient {
-                Text(ingredient.name ?? "")
-                    .font(.body)
-                
-                Spacer()
-                
-                Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-    
-    private var ingredientsSection: some View {
-        Section("Ingredients") {
-            ForEach(ingredients) { recipeIngredient in
-                ingredientView(for: recipeIngredient)
-                    .id("recipeIngredient-\(recipeIngredient.objectID)-\(recipeIngredient.ingredient?.name ?? "")")
-            }
-        }
-    }
-    
-    private var stepsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Instructions")
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            ForEach(recipe.stepsArray) { step in
-                VStack(alignment: .leading, spacing: 12) {
-                    // Step header
-                    HStack {
-                        Circle()
-                            .fill(Color.blue.opacity(0.1))
-                            .frame(width: 32, height: 32)
-                            .overlay {
-                                Text("\(step.order + 1)")
-                                    .font(.headline)
-                                    .foregroundColor(.blue)
-                            }
-                        
-                        Text("Step \(step.order + 1)")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                    }
-                    
-                    // Instructions
-                    Text(step.instructions ?? "")
-                        .font(.body)
-                        .lineSpacing(4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // Used ingredients
-                    if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "leaf.fill")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                            
-                            Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .background(Color.orange.opacity(0.1))
-                        .cornerRadius(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-            }
-        }
-        .padding()
-    }
-    
-    private func startNativeTimer(duration: StepDuration) {
-        // Format the timer URL with components
-        var components = URLComponents()
-        components.scheme = "x-apple-timer"
-        components.queryItems = [
-            URLQueryItem(name: "minutes", value: String(duration.totalSeconds / 60))
-        ]
-        
-        if let url = components.url {
-            UIApplication.shared.open(url) { success in
-                if !success {
-                    // Fallback to Clock app if timer scheme fails
-                    if let clockURL = URL(string: "clock:") {
-                        UIApplication.shared.open(clockURL)
-                    }
-                }
-            }
-        }
-    }
-    
-    private var deleteSection: some View {
-        Section {
-            Button("Delete Recipe", role: .destructive) {
-                showingDeleteAlert = true
-            }
-        }
-    }
-    
-    // Create a separate view for the toolbar buttons
-    private var toolbarButtons: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .foregroundColor(.black)
-                    .padding()
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: .black.opacity(0.1), radius: 5)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 16) {
-                Button(action: { showingEditSheet = true }) {
-                    Image(systemName: "pencil")
-                        .foregroundColor(.black)
-                        .padding()
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .shadow(color: .black.opacity(0.1), radius: 5)
-                }
-            }
-        }
-        .padding(.horizontal)
-    }
-    
-    // Update the body view
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                // Main content
-                ScrollView {
-                    VStack(spacing: 0) {
-                        recipeImage
-                        
-                        // Ingredients section
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Ingredients")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            
-                            ForEach(ingredients) { recipeIngredient in
-                                let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
-                                HStack {
-                                    if let ingredient = recipeIngredient.ingredient {
-                                        Text(ingredient.name ?? "")
-                                            .font(.body)
-                                        
-                                        Spacer()
-                                        
-                                        Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
-                                            .foregroundColor(.gray)
-                                    }
-                                }
-                                .padding(.vertical, 8)
-                            }
-                        }
-                        .padding()
-                        
-                        // Steps section
-                        stepsSection
-                        
-                        // Add padding at the bottom for the fixed button
-                        Color.clear.frame(height: 100)
-                    }
-                }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header with image and basic info
+                recipeHeader
                 
-                // Overlay toolbar at top
-                VStack {
-                    toolbarButtons
-                        .padding(.top, 8)
-                    
-                    Spacer()
-                    
-                    // Fixed Start cooking button at bottom
-                    VStack {
-                        Button(action: { showingCookingMode = true }) {
-                            HStack {
-                                Image(systemName: "play.fill")
-                                Text("Start cooking")
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.black)
-                            .cornerRadius(12)
-                        }
-                        .padding()
+                // Main content
+                VStack(alignment: .leading, spacing: 24) {
+                    // Description
+                    if let description = recipe.desc, !description.isEmpty {
+                        descriptionSection(description)
                     }
-                    .background(
-                        Rectangle()
-                            .fill(.white)
-                            .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
-                    )
+                    
+                    // Ingredients
+                    ingredientsSection
+                    
+                    // Steps
+                    stepsSection
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 100) // Space for the bottom button
             }
-            .navigationBarHidden(true)
-            .toolbar(.hidden, for: .tabBar)
         }
+        .scrollIndicators(.visible)
+        .safeAreaInset(edge: .top) {
+            Color.clear.frame(height: 0)
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .top) {
+            headerOverlay
+        }
+        .overlay(alignment: .bottom) {
+            startCookingButton
+        }
+        .ignoresSafeArea(.container, edges: .top)
+        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .id(refreshID)
         .sheet(isPresented: $showingEditSheet, onDismiss: {
             viewContext.refresh(recipe, mergeChanges: true)
@@ -461,40 +126,344 @@ struct RecipeDetailView: View {
         .onAppear {
             servings = recipe.servings
             refreshID = UUID()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isHeaderFocused = true
+            }
         }
         .onDisappear {
             refreshID = UUID()
         }
     }
     
+    // MARK: - Component Views
+    
+    private var recipeHeader: some View {
+        VStack(spacing: 16) {
+            // Recipe image
+            ZStack(alignment: .bottom) {
+                if let imageData = recipe.imageData,
+                   let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 250)
+                        .clipped()
+                        .accessibilityHidden(true)
+                } else {
+                    Rectangle()
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(height: 250)
+                        .overlay {
+                            Image(systemName: "fork.knife")
+                                .font(.system(size: 60))
+                                .foregroundColor(.orange)
+                        }
+                        .accessibilityHidden(true)
+                }
+                
+                // Gradient overlay for better text visibility
+                LinearGradient(
+                    gradient: Gradient(colors: [.clear, .black.opacity(0.5)]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 100)
+            }
+            
+            // Recipe info
+            VStack(alignment: .leading, spacing: 16) {
+                // Title and difficulty
+                HStack(alignment: .center) {
+                    Text(recipe.name ?? "")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .accessibilityFocused($isHeaderFocused)
+                    
+                    Spacer()
+                    
+                    if let difficultyString = recipe.difficulty,
+                       let difficulty = Difficulty(rawValue: difficultyString) {
+                        DifficultyPill(difficulty: difficulty)
+                    }
+                }
+                
+                // Stats row
+                HStack(spacing: 24) {
+                    // Time
+                    Label {
+                        Text("\(recipe.timeInMinutes) min")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } icon: {
+                        Image(systemName: "clock")
+                            .foregroundColor(.orange)
+                    }
+                    
+                    // Servings with stepper
+                    servingsControl
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+    
+    private var servingsControl: some View {
+        HStack(spacing: 8) {
+            Label {
+                Text("Servings")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } icon: {
+                Image(systemName: "person.2")
+                    .foregroundColor(.orange)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 12) {
+                Button {
+                    if servings > 1 {
+                        servings -= 1
+                        updateServings()
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .disabled(servings <= 1)
+                .accessibilityLabel("Decrease servings")
+                
+                Text("\(servings)")
+                    .font(.headline)
+                    .frame(minWidth: 24, alignment: .center)
+                    .accessibilityLabel("\(servings) servings")
+                
+                Button {
+                    if servings < 20 {
+                        servings += 1
+                        updateServings()
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .disabled(servings >= 20)
+                .accessibilityLabel("Increase servings")
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.secondary.opacity(0.05))
+        )
+    }
+    
+    private func descriptionSection(_ description: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("About")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            Text(description)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(4)
+        }
+    }
+    
+    private var ingredientsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Ingredients")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 12) {
+                ForEach(ingredients) { recipeIngredient in
+                    let scaledQuantity = recipeIngredient.quantity * Double(servings) / Double(recipe.servings)
+                    HStack {
+                        if let ingredient = recipeIngredient.ingredient {
+                            Text(ingredient.name ?? "")
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Text(String(format: "%.1f %@", scaledQuantity, recipeIngredient.unit ?? ""))
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.05))
+                    )
+                }
+            }
+        }
+    }
+    
+    private var stepsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Instructions")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 16) {
+                ForEach(recipe.stepsArray) { step in
+                    stepView(step)
+                }
+            }
+        }
+    }
+    
+    private func stepView(_ step: Step) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Step header
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(width: 36, height: 36)
+                    
+                    Text("\(step.order + 1)")
+                        .font(.headline)
+                        .foregroundColor(.orange)
+                }
+                
+                Text("Step \(step.order + 1)")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            
+            // Instructions
+            Text(step.instructions ?? "")
+                .font(.body)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(4)
+                .padding(.leading, 48) // Align with step number
+            
+            // Used ingredients
+            if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "leaf.fill")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    
+                    Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.leading, 48) // Align with step number
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+    }
+    
+    private var headerOverlay: some View {
+        HStack {
+            // Back button
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(UIColor.systemBackground).opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+                    )
+            }
+            .accessibilityLabel("Back")
+            
+            Spacer()
+            
+            // Edit button
+            Button(action: { showingEditSheet = true }) {
+                Image(systemName: "pencil")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(UIColor.systemBackground).opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+                    )
+            }
+            .accessibilityLabel("Edit recipe")
+            
+            // Delete button
+            Button(action: { showingDeleteAlert = true }) {
+                Image(systemName: "trash")
+                    .font(.headline)
+                    .foregroundColor(.red)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(UIColor.systemBackground).opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+                    )
+            }
+            .accessibilityLabel("Delete recipe")
+        }
+        .padding()
+        .padding(.top, 44) // Account for safe area
+    }
+    
+    private var startCookingButton: some View {
+        VStack {
+            Button(action: { showingCookingMode = true }) {
+                HStack {
+                    Image(systemName: "play.fill")
+                    Text("Start Cooking")
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.orange)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            }
+            .accessibilityLabel("Start cooking mode")
+            .padding()
+        }
+        .background(
+            Rectangle()
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, y: -4)
+                .edgesIgnoringSafeArea(.bottom)
+        )
+    }
+    
+    // MARK: - Helper Functions
+    
     private func deleteRecipe() {
         viewContext.delete(recipe)
         try? viewContext.save()
         dismiss()
-    }
-    
-    // Change IngredientsListView to a computed property to avoid redeclaration
-    private var ingredientsListView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ingredients")
-                .font(.headline)
-            
-            ForEach(ingredients) { recipeIngredient in
-                HStack {
-                    if let ingredient = recipeIngredient.ingredient {
-                        Text(ingredient.name ?? "")
-                            .font(.body)
-                        
-                        Spacer()
-                        
-                        Text(String(format: "%.1f %@", recipeIngredient.quantity, recipeIngredient.unit ?? ""))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-        }
-        .padding(.vertical)
     }
     
     private func updateServings() {
@@ -522,65 +491,10 @@ struct RecipeDetailView: View {
             }
         }
     }
-    
-    private func updateLocalState() {
-        servings = recipe.servings
-        refreshID = UUID()
-    }
 }
 
-// Add these supporting views
-private struct ServingsControlView: View {
-    @Binding var servings: Int16
-    let recipe: Recipe  // Add this
-    @Environment(\.managedObjectContext) private var viewContext
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            Button(action: { 
-                if servings > 1 {
-                    servings -= 1
-                    updateServings()
-                }
-            }) {
-                Image(systemName: "minus")
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .clipShape(Circle())
-            }
-            
-            Text("\(servings)")
-                .font(.title2)
-                .fontWeight(.bold)
-                .frame(width: 50)
-            
-            Button(action: { 
-                if servings < 20 {
-                    servings += 1
-                    updateServings()
-                }
-            }) {
-                Image(systemName: "plus")
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .clipShape(Circle())
-            }
-            Spacer()
-        }
-        .padding(.vertical, 8)
-    }
-    
-    private func updateServings() {
-        viewContext.perform {
-            recipe.servings = servings
-            try? viewContext.save()
-            viewContext.refresh(recipe, mergeChanges: true)
-        }
-    }
-}
+// MARK: - Supporting Views
 
-// Add helper view for difficulty pill
 private struct DifficultyPill: View {
     let difficulty: Difficulty
     

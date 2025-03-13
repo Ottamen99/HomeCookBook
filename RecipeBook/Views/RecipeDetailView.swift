@@ -182,7 +182,7 @@ struct RecipeDetailView: View {
             Image(systemName: "person.2")
                 .foregroundColor(.blue)
             Stepper("Servings: \(servings)", value: $servings, in: 1...20)
-                .onChange(of: servings) { _ in
+                .onChange(of: servings) { oldValue, newValue in
                     updateServings()
                 }
         }
@@ -436,7 +436,7 @@ struct RecipeDetailView: View {
                 )
             }
         }
-        .onChange(of: shouldDismiss) { newValue in
+        .onChange(of: shouldDismiss) { oldValue, newValue in
             if newValue {
                 dismiss()
             }
@@ -454,7 +454,7 @@ struct RecipeDetailView: View {
         } message: {
             Text("Are you sure you want to delete this recipe? This action cannot be undone.")
         }
-        .onChange(of: recipe) { newRecipe in
+        .onChange(of: recipe) { oldRecipe, newRecipe in
             servings = newRecipe.servings
             refreshID = UUID()
         }
@@ -500,7 +500,6 @@ struct RecipeDetailView: View {
     private func updateServings() {
         let oldServings = recipe.servings
         let newServings = servings
-        let ratio = Double(newServings) / Double(oldServings)
         
         viewContext.performAndWait {
             // Update recipe servings first

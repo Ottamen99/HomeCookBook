@@ -13,6 +13,7 @@ struct ContentView: View {
     @StateObject private var viewModel: RecipeViewModel
     
     init() {
+        // Initialize the view model
         _viewModel = StateObject(wrappedValue: RecipeViewModel(viewContext: PersistenceController.shared.container.viewContext))
         
         // Configure tab bar appearance
@@ -27,30 +28,40 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            RecipesView()
-                .tabItem {
-                    Label("Recipes", systemImage: "book")
-                }
+            NavigationStack {
+                RecipesView()
+            }
+            .tabItem {
+                Label("Recipes", systemImage: "book")
+            }
 
-            RecipeBooksGridView()
-                .tabItem {
-                    Label("Recipe Books", systemImage: "books.vertical.fill")
-                }
+            NavigationStack {
+                RecipeBooksGridView()
+            }
+            .tabItem {
+                Label("Recipe Books", systemImage: "books.vertical.fill")
+            }
 
-            /*PantryView()
-                .tabItem {
-                    Label("My Pantry", systemImage: "basket.fill")
-                }*/
+            /*NavigationStack {
+                PantryView()
+            }
+            .tabItem {
+                Label("My Pantry", systemImage: "basket.fill")
+            }*/
             
-            IngredientsListView()
-                .tabItem {
-                    Label("Ingredients", systemImage: "leaf")
-                }
+            NavigationStack {
+                IngredientsListView()
+            }
+            .tabItem {
+                Label("Ingredients", systemImage: "leaf")
+            }
             
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
         .environmentObject(viewModel)
     }

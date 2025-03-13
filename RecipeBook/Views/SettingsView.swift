@@ -60,12 +60,24 @@ struct SettingsView: View {
                     Text("SUPPORT")
                 }
             }
-            .navigationTitle("Settings")
-            .alert("Contact Support", isPresented: $showingEmailAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Please send an email to:\n\(supportEmail)")
+            
+            Section("Stats") {
+                NavigationLink {
+                    RecipeStatsView()
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                            .foregroundColor(.orange)
+                        Text("Recipe Statistics")
+                    }
+                }
             }
+        }
+        .navigationTitle("Settings")
+        .alert("Contact Support", isPresented: $showingEmailAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please send an email to:\n\(supportEmail)")
         }
         .accentColor(.orange)
     }

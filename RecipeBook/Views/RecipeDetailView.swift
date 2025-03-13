@@ -57,7 +57,7 @@ struct RecipeDetailView: View {
                 recipeHeader
                 
                 // Main content
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 32) {
                     // Description
                     if let description = recipe.desc, !description.isEmpty {
                         descriptionSection(description)
@@ -69,7 +69,7 @@ struct RecipeDetailView: View {
                     // Steps
                     stepsSection
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Space for the bottom button
             }
         }
@@ -138,7 +138,7 @@ struct RecipeDetailView: View {
     // MARK: - Component Views
     
     private var recipeHeader: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             // Recipe image
             ZStack(alignment: .bottom) {
                 if let imageData = recipe.imageData,
@@ -146,13 +146,13 @@ struct RecipeDetailView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
-                        .frame(height: 250)
+                        .frame(height: 280)
                         .clipped()
                         .accessibilityHidden(true)
                 } else {
                     Rectangle()
                         .fill(Color.orange.opacity(0.2))
-                        .frame(height: 250)
+                        .frame(height: 280)
                         .overlay {
                             Image(systemName: "fork.knife")
                                 .font(.system(size: 60))
@@ -163,21 +163,22 @@ struct RecipeDetailView: View {
                 
                 // Gradient overlay for better text visibility
                 LinearGradient(
-                    gradient: Gradient(colors: [.clear, .black.opacity(0.5)]),
+                    gradient: Gradient(colors: [.clear, .black.opacity(0.6)]),
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 100)
+                .frame(height: 120)
             }
             
             // Recipe info
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 // Title and difficulty
                 HStack(alignment: .center) {
                     Text(recipe.name ?? "")
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
+                        .lineSpacing(4) // Improve readability
                         .accessibilityFocused($isHeaderFocused)
                     
                     Spacer()
@@ -204,7 +205,7 @@ struct RecipeDetailView: View {
                     servingsControl
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
         }
     }
     
@@ -221,7 +222,7 @@ struct RecipeDetailView: View {
             
             Spacer()
             
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Button {
                     if servings > 1 {
                         servings -= 1
@@ -229,9 +230,9 @@ struct RecipeDetailView: View {
                     }
                 } label: {
                     Image(systemName: "minus")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundColor(.primary)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 44, height: 44) // 44pt minimum hit target
                         .background(Color.secondary.opacity(0.1))
                         .clipShape(Circle())
                 }
@@ -250,9 +251,9 @@ struct RecipeDetailView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
-                        .font(.caption)
+                        .font(.body)
                         .foregroundColor(.primary)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 44, height: 44) // 44pt minimum hit target
                         .background(Color.secondary.opacity(0.1))
                         .clipShape(Circle())
                 }
@@ -260,32 +261,35 @@ struct RecipeDetailView: View {
                 .accessibilityLabel("Increase servings")
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.secondary.opacity(0.05))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.08))
         )
     }
     
     private func descriptionSection(_ description: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("About")
-                .font(.headline)
+                .font(.title3)
+                .fontWeight(.bold)
                 .foregroundColor(.primary)
             
             Text(description)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(4)
+                .lineSpacing(6) // Improved line spacing for readability
         }
+        .padding(.vertical, 8)
     }
     
     private var ingredientsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Ingredients")
-                .font(.headline)
+                .font(.title3)
+                .fontWeight(.bold)
                 .foregroundColor(.primary)
             
             VStack(spacing: 12) {
@@ -296,6 +300,7 @@ struct RecipeDetailView: View {
                             Text(ingredient.name ?? "")
                                 .font(.body)
                                 .foregroundColor(.primary)
+                                .lineLimit(1)
                             
                             Spacer()
                             
@@ -304,24 +309,29 @@ struct RecipeDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12) // Increased for better hit target
+                    .padding(.horizontal, 16)
                     .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.05))
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(colorScheme == .dark ? 
+                                  Color(UIColor.secondarySystemBackground) : 
+                                  Color(UIColor.systemBackground))
+                            .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
                     )
+                    .contentShape(Rectangle()) // Ensure the entire row is tappable
                 }
             }
         }
     }
     
     private var stepsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             Text("Instructions")
-                .font(.headline)
+                .font(.title3)
+                .fontWeight(.bold)
                 .foregroundColor(.primary)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 24) { // Increased spacing between steps
                 ForEach(recipe.stepsArray) { step in
                     stepView(step)
                 }
@@ -330,13 +340,13 @@ struct RecipeDetailView: View {
     }
     
     private func stepView(_ step: Step) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             // Step header
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 16) {
                 ZStack {
                     Circle()
                         .fill(Color.orange.opacity(0.2))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44) // 44pt minimum hit target
                     
                     Text("\(step.order + 1)")
                         .font(.headline)
@@ -353,32 +363,32 @@ struct RecipeDetailView: View {
                 .font(.body)
                 .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(4)
-                .padding(.leading, 48) // Align with step number
+                .lineSpacing(6) // Improved line spacing
+                .padding(.leading, 60) // Align with step number
             
             // Used ingredients
             if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
                 HStack(spacing: 8) {
                     Image(systemName: "leaf.fill")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.orange)
                     
                     Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
                 .background(Color.orange.opacity(0.1))
-                .cornerRadius(8)
-                .padding(.leading, 48) // Align with step number
+                .cornerRadius(10)
+                .padding(.leading, 60) // Align with step number
             }
         }
-        .padding()
+        .padding(20)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
         )
     }
     
@@ -389,7 +399,7 @@ struct RecipeDetailView: View {
                 Image(systemName: "chevron.left")
                     .font(.headline)
                     .foregroundColor(.primary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 44, height: 44) // 44pt minimum hit target
                     .background(
                         Circle()
                             .fill(Color(UIColor.systemBackground).opacity(0.9))
@@ -400,35 +410,37 @@ struct RecipeDetailView: View {
             
             Spacer()
             
-            // Edit button
-            Button(action: { showingEditSheet = true }) {
-                Image(systemName: "pencil")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(Color(UIColor.systemBackground).opacity(0.9))
-                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
-                    )
+            HStack(spacing: 12) {
+                // Edit button
+                Button(action: { showingEditSheet = true }) {
+                    Image(systemName: "pencil")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .frame(width: 44, height: 44) // 44pt minimum hit target
+                        .background(
+                            Circle()
+                                .fill(Color(UIColor.systemBackground).opacity(0.9))
+                                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+                        )
+                }
+                .accessibilityLabel("Edit recipe")
+                
+                // Delete button
+                Button(action: { showingDeleteAlert = true }) {
+                    Image(systemName: "trash")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                        .frame(width: 44, height: 44) // 44pt minimum hit target
+                        .background(
+                            Circle()
+                                .fill(Color(UIColor.systemBackground).opacity(0.9))
+                                .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+                        )
+                }
+                .accessibilityLabel("Delete recipe")
             }
-            .accessibilityLabel("Edit recipe")
-            
-            // Delete button
-            Button(action: { showingDeleteAlert = true }) {
-                Image(systemName: "trash")
-                    .font(.headline)
-                    .foregroundColor(.red)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(Color(UIColor.systemBackground).opacity(0.9))
-                            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
-                    )
-            }
-            .accessibilityLabel("Delete recipe")
         }
-        .padding()
+        .padding(16)
         .padding(.top, 44) // Account for safe area
     }
     
@@ -438,17 +450,19 @@ struct RecipeDetailView: View {
                 HStack {
                     Image(systemName: "play.fill")
                     Text("Start Cooking")
+                        .font(.headline)
                         .fontWeight(.semibold)
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding()
+                .frame(height: 54) // Taller button for better hit target
                 .background(Color.orange)
-                .cornerRadius(12)
+                .cornerRadius(16)
                 .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             }
             .accessibilityLabel("Start cooking mode")
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .background(
             Rectangle()
@@ -499,14 +513,14 @@ private struct DifficultyPill: View {
     let difficulty: Difficulty
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Image(systemName: difficulty.icon)
             Text(difficulty.rawValue)
         }
         .font(.subheadline)
         .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(difficulty.color)
         .clipShape(Capsule())
     }

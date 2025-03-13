@@ -3,6 +3,8 @@ import SwiftUI
 struct AddRecipeView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var viewModel: RecipeViewModel
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Ingredient.name, ascending: true)],
@@ -18,295 +20,553 @@ struct AddRecipeView: View {
     @State private var image: UIImage?
     @State private var activeSheet: AddRecipeSheet?
     @State private var difficulty: Difficulty = .medium
+    @FocusState private var isNameFocused: Bool
+    @FocusState private var isDescriptionFocused: Bool
     
-    private var recipeImage: some View {
-        VStack(spacing: 24) {
-            // Circular image
-            Group {
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 250, height: 250)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
-                        .shadow(color: .black.opacity(0.1), radius: 8)
-                } else {
-                    Circle()
-                        .fill(Color.orange.opacity(0.1))
-                        .frame(width: 250, height: 250)
-                        .overlay {
-                            Image(systemName: "fork.knife.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundColor(.orange)
-                        }
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                Button {
-                    activeSheet = .imagePicker
-                } label: {
-                    Image(systemName: "camera.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.white, Color.orange)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                }
-                .offset(x: -8, y: -8)
-            }
-            
-            // Recipe name input
-            TextField("Recipe Name", text: $name)
-                .font(.title)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-            
-            // Stats row
-            HStack(spacing: 20) {
-                // Time
-                HStack(spacing: 4) {
-                    Button(action: {
-                        if timeInMinutes > 1 {
-                            timeInMinutes -= 1
-                        }
-                    }) {
-                        Image(systemName: "minus")
-                            .foregroundColor(.black)
-                            .frame(width: 10, height: 10)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    VStack {
-                        Text("\(timeInMinutes)")
-                            .fontWeight(.bold)
-                        Text("min")
-                            .foregroundColor(.gray)
-                    }
-                    .frame(width: 50)
-                    
-                    Button(action: {
-                        if timeInMinutes < 480 {
-                            timeInMinutes += 1
-                        }
-                    }) {
-                        Image(systemName: "plus")
-                            .foregroundColor(.black)
-                            .frame(width: 10, height: 10)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                }
-                .font(.body)
-                
-                // Servings
-                HStack(spacing: 4) {
-                    Button(action: { 
-                        if servings > 1 {
-                            servings -= 1
-                        }
-                    }) {
-                        Image(systemName: "minus")
-                            .foregroundColor(.black)
-                            .frame(width: 10, height: 10)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                    
-                    VStack {
-                        Text("\(servings)")
-                            .fontWeight(.bold)
-                        Text("serve")
-                            .foregroundColor(.gray)
-                    }
-                    .frame(width: 50)
-                    
-                    Button(action: { 
-                        if servings < 20 {
-                            servings += 1
-                        }
-                    }) {
-                        Image(systemName: "plus")
-                            .foregroundColor(.black)
-                            .frame(width: 10, height: 10)
-                            .padding(8)
-                            .background(Color.gray.opacity(0.1))
-                            .clipShape(Circle())
-                    }
-                }
-                .font(.body)
-                
-                // Difficulty selector
-                VStack(spacing: 4) {
-                    Menu {
-                        Picker("Difficulty", selection: $difficulty) {
-                            ForEach(Difficulty.allCases, id: \.self) { level in
-                                Label(level.rawValue, systemImage: level.icon)
-                                    .foregroundColor(level.color)
-                                    .tag(level)
-                            }
-                        }
-                    } label: {
-                        VStack {
-                            Image(systemName: difficulty.icon)
-                                .foregroundColor(difficulty.color)
-                            Text(difficulty.rawValue)
-                                .foregroundColor(.gray)
-                        }
-                        .frame(width: 70)
-                    }
-                }
-            }
-            .padding()
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(.gray, lineWidth: 0.5)
-            )
-        }
-        .padding(.top, 40)
-    }
-    
-    // Add toolbar buttons view
-    private var toolbarButtons: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .foregroundColor(.black)
-                    .padding()
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: .black.opacity(0.1), radius: 5)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal)
-    }
+    // MARK: - Body
     
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 24) {
-                    recipeImage
-                    
-                    // Description
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Description")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        TextEditor(text: $description)
-                            .frame(minHeight: 100, maxHeight: 200)
-                            .scrollContentBackground(.hidden)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                    }
-                    .padding()
-                    
-                    // Ingredients
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Ingredients")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            
-                            Spacer()
-                            
-                            Button {
-                                activeSheet = .ingredients
-                            } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                        
-                        ForEach($selectedIngredients) { $ingredient in
-                            HStack {
-                                Text(ingredient.ingredient.name ?? "")
-                                    .font(.body)
-                                    .lineLimit(1)
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 8) {
-                                    TextField("Qty", value: $ingredient.quantity, format: .number)
-                                        .keyboardType(.decimalPad)
-                                        .frame(width: 50)
-                                        .multilineTextAlignment(.trailing)
-                                    
-                                    Picker("Unit", selection: $ingredient.unit) {
-                                        ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
-                                            Text(unit.displayName).tag(unit)
-                                        }
-                                    }
-                                    .foregroundColor(.orange)
-                                    .pickerStyle(.menu)
-                                    .frame(width: 120)
-                                }
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    .padding()
-                    
-                    // Add padding for the bottom button
-                    Color.clear.frame(height: 100)
-                }
-            }
-            .dismissKeyboardOnTap()
-            
-            // Overlay toolbar at top
-            VStack {
-                toolbarButtons
-                    .padding(.top, 8)
+        ScrollView {
+            VStack(spacing: 32) {
+                // Recipe image and basic info
+                recipeImageSection
                 
-                Spacer()
+                // Description section
+                descriptionSection
                 
-                // Keep existing bottom button if any
+                // Ingredients section
+                ingredientsSection
+                
+                // Add padding for the bottom button
+                Color.clear.frame(height: 80)
             }
+            .padding(.top, 16)
+        }
+        .scrollIndicators(.visible)
+        .dismissKeyboardOnTap()
+        .overlay(alignment: .top) {
+            headerOverlay
+        }
+        .safeAreaInset(edge: .bottom) {
+            createRecipeButton
         }
         .navigationBarHidden(true)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            ToolbarItem(placement: .principal) {
-                Text("New Recipe")
-                    .font(.headline)
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            Button(action: {
-                saveRecipe()
-                dismiss()
-            }) {
-                Text("Create Recipe")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.black)
-                    .cornerRadius(12)
-            }
-            .disabled(name.isEmpty || selectedIngredients.isEmpty)
-            .padding()
-            .background(.white)
-        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .ingredients:
-                IngredientSelectionView(selectedIngredients: $selectedIngredients)
+                NavigationStack {
+                    IngredientSelectionView(selectedIngredients: $selectedIngredients)
+                }
             case .imagePicker:
                 ImagePicker(image: $image)
             }
         }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isNameFocused = true
+            }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isNameFocused = false
+                    isDescriptionFocused = false
+                }
+            }
+        }
     }
+    
+    // MARK: - Component Views
+    
+    private var recipeImageSection: some View {
+        VStack(spacing: dynamicTypeSize > .large ? 16 : 24) {
+            // Recipe image
+            ZStack {
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 200, height: 200)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.1), radius: 8)
+                        .accessibilityHidden(true)
+                } else {
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 200, height: 200)
+                        .overlay {
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.orange)
+                        }
+                        .accessibilityHidden(true)
+                }
+                
+                // Camera button
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            activeSheet = .imagePicker
+                        } label: {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.white)
+                                .frame(width: 48, height: 48) // Slightly larger for better visibility
+                                .background(Color.orange)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
+                        .accessibilityLabel("Add recipe photo")
+                        .offset(x: -8, y: -8)
+                    }
+                }
+                .frame(width: 200, height: 200)
+            }
+            
+            // Recipe name input
+            TextField("Recipe Name", text: $name)
+                .font(.title2.weight(.bold))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .focused($isNameFocused)
+                .accessibilityLabel("Recipe name")
+                .submitLabel(.next)
+                .onSubmit {
+                    isDescriptionFocused = true
+                }
+            
+            // Stats row
+            statsRow
+        }
+    }
+    
+    private var statsRow: some View {
+        VStack(spacing: 16) {
+            // For larger dynamic type sizes, stack controls vertically
+            if dynamicTypeSize > .large {
+                VStack(spacing: 20) {
+                    timeControl
+                    servingsControl
+                    difficultyControl
+                }
+            } else {
+                HStack(spacing: 24) {
+                    timeControl
+                    servingsControl
+                    difficultyControl
+                }
+            }
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.secondarySystemBackground) : 
+                      Color(UIColor.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    private var timeControl: some View {
+        VStack(spacing: 8) {
+            Text("Time")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.secondary)
+            
+            HStack(spacing: 12) {
+                Button(action: {
+                    if timeInMinutes > 5 {
+                        timeInMinutes -= 5
+                    }
+                }) {
+                    Image(systemName: "minus")
+                        .foregroundColor(timeInMinutes <= 5 ? .secondary : .primary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                }
+                .disabled(timeInMinutes <= 5)
+                .accessibilityLabel("Decrease cooking time")
+                
+                VStack(spacing: 2) {
+                    Text("\(timeInMinutes)")
+                        .font(.headline)
+                    Text("min")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(minWidth: 50)
+                .accessibilityLabel("\(timeInMinutes) minutes cooking time")
+                
+                Button(action: {
+                    if timeInMinutes < 480 {
+                        timeInMinutes += 5
+                    }
+                }) {
+                    Image(systemName: "plus")
+                        .foregroundColor(timeInMinutes >= 480 ? .secondary : .primary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                }
+                .disabled(timeInMinutes >= 480)
+                .accessibilityLabel("Increase cooking time")
+            }
+        }
+    }
+    
+    private var servingsControl: some View {
+        VStack(spacing: 8) {
+            Text("Servings")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.secondary)
+            
+            HStack(spacing: 12) {
+                Button(action: { 
+                    if servings > 1 {
+                        servings -= 1
+                    }
+                }) {
+                    Image(systemName: "minus")
+                        .foregroundColor(servings <= 1 ? .secondary : .primary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                }
+                .disabled(servings <= 1)
+                .accessibilityLabel("Decrease servings")
+                
+                VStack(spacing: 2) {
+                    Text("\(servings)")
+                        .font(.headline)
+                    Text("serve")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(minWidth: 50)
+                .accessibilityLabel("\(servings) servings")
+                
+                Button(action: { 
+                    if servings < 20 {
+                        servings += 1
+                    }
+                }) {
+                    Image(systemName: "plus")
+                        .foregroundColor(servings >= 20 ? .secondary : .primary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                }
+                .disabled(servings >= 20)
+                .accessibilityLabel("Increase servings")
+            }
+        }
+    }
+    
+    private var difficultyControl: some View {
+        VStack(spacing: 8) {
+            Text("Difficulty")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.secondary)
+            
+            Menu {
+                Picker("Difficulty", selection: $difficulty) {
+                    ForEach(Difficulty.allCases, id: \.self) { level in
+                        Label {
+                            Text(level.rawValue)
+                        } icon: {
+                            Image(systemName: level.icon)
+                                .foregroundColor(level.color)
+                        }
+                        .tag(level)
+                    }
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: difficulty.icon)
+                        .font(.headline)
+                        .foregroundColor(difficulty.color)
+                        .frame(height: 24)
+                    
+                    Text(difficulty.rawValue)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.secondary.opacity(0.1))
+                )
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Select difficulty: \(difficulty.rawValue)")
+        }
+    }
+    
+    private var descriptionSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Description")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                if !description.isEmpty {
+                    Text("\(description.count) characters")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            TextEditor(text: $description)
+                .frame(minHeight: 120)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(colorScheme == .dark ? 
+                              Color(UIColor.secondarySystemBackground) : 
+                              Color(UIColor.systemBackground))
+                        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+                .focused($isDescriptionFocused)
+                .padding(.horizontal, 20)
+                .accessibilityLabel("Recipe description")
+        }
+    }
+    
+    private var ingredientsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Ingredients")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button {
+                    activeSheet = .ingredients
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.orange)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        Capsule()
+                            .fill(Color.orange.opacity(0.1))
+                    )
+                    .contentShape(Capsule())
+                }
+                .accessibilityLabel("Add ingredients")
+            }
+            .padding(.horizontal, 20)
+            
+            if selectedIngredients.isEmpty {
+                emptyIngredientsView
+            } else {
+                ingredientsList
+            }
+        }
+    }
+    
+    private var emptyIngredientsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "leaf.circle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange.opacity(0.5))
+                .padding(.top, 20)
+            
+            Text("No ingredients added yet")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Button {
+                activeSheet = .ingredients
+            } label: {
+                Text("Add Ingredients")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(height: 44) // 44pt minimum hit target
+                    .frame(maxWidth: 200)
+                    .background(Color.orange)
+                    .cornerRadius(10)
+            }
+            .padding(.bottom, 20)
+        }
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.secondarySystemBackground) : 
+                      Color(UIColor.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    private var ingredientsList: some View {
+        VStack(spacing: 0) {
+            ForEach($selectedIngredients) { $ingredient in
+                HStack {
+                    Text(ingredient.ingredient.name ?? "")
+                        .font(.body)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 12) {
+                        TextField("Qty", value: $ingredient.quantity, format: .number)
+                            .keyboardType(.decimalPad)
+                            .frame(width: 60)
+                            .multilineTextAlignment(.trailing)
+                            .padding(8)
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(8)
+                        
+                        Picker("Unit", selection: $ingredient.unit) {
+                            ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                Text(unit.displayName).tag(unit)
+                            }
+                        }
+                        .foregroundColor(.orange)
+                        .pickerStyle(.menu)
+                        .frame(width: 120)
+                    }
+                }
+                .padding(.vertical, 12) // Increased for better hit target
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(Color.clear)
+                )
+                
+                Divider()
+                    .padding(.horizontal, 16)
+            }
+            
+            // Add button to add more ingredients
+            Button {
+                activeSheet = .ingredients
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle")
+                    Text("Add More Ingredients")
+                }
+                .font(.subheadline)
+                .foregroundColor(.orange)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.secondarySystemBackground) : 
+                      Color(UIColor.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    private var headerOverlay: some View {
+        HStack {
+            // Back button
+            Button(action: { dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44) // 44pt minimum hit target
+                    .background(
+                        Circle()
+                            .fill(colorScheme == .dark ? 
+                                  Color(UIColor.secondarySystemBackground) : 
+                                  Color(UIColor.systemBackground))
+                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                    )
+            }
+            .accessibilityLabel("Cancel")
+            
+            Spacer()
+            
+            Text("New Recipe")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            // Placeholder to balance the layout
+            Color.clear
+                .frame(width: 44, height: 44)
+        }
+        .padding(16)
+        .background(
+            Rectangle()
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.systemBackground) : 
+                      Color.white)
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+    }
+    
+    private var createRecipeButton: some View {
+        Button(action: {
+            saveRecipe()
+            dismiss()
+        }) {
+            Text("Create Recipe")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54) // Taller button for better hit target
+                .background(
+                    name.isEmpty || selectedIngredients.isEmpty ? 
+                    Color.gray : Color.orange
+                )
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+        .disabled(name.isEmpty || selectedIngredients.isEmpty)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            Rectangle()
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.systemBackground) : 
+                      Color.white)
+                .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+                .edgesIgnoringSafeArea(.bottom)
+        )
+    }
+    
+    // MARK: - Helper Functions
     
     private func saveRecipe() {
         let recipe = Recipe(context: viewContext)
@@ -356,5 +616,15 @@ enum AddRecipeSheet: Identifiable {
         case .imagePicker: return 0
         case .ingredients: return 1
         }
+    }
+}
+
+#Preview {
+    let context = PersistenceController.preview.container.viewContext
+    
+    return NavigationStack {
+        AddRecipeView()
+            .environment(\.managedObjectContext, context)
+            .environmentObject(RecipeViewModel(viewContext: context))
     }
 } 

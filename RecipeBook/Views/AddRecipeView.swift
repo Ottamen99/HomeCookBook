@@ -27,7 +27,7 @@ struct AddRecipeView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
+            VStack(spacing: 24) {
                 // Recipe image and basic info
                 recipeImageSection
                 
@@ -41,6 +41,7 @@ struct AddRecipeView: View {
                 Color.clear.frame(height: 80)
             }
             .padding(.top, 16)
+            .padding(.horizontal, dynamicTypeSize > .large ? 12 : 16)
         }
         .scrollIndicators(.visible)
         .dismissKeyboardOnTap()
@@ -88,7 +89,7 @@ struct AddRecipeView: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 200, height: 200)
+                        .frame(width: min(200, UIScreen.main.bounds.width - 40), height: min(200, UIScreen.main.bounds.width - 40))
                         .clipShape(Circle())
                         .overlay(Circle().stroke(Color(.systemGray6), lineWidth: 1))
                         .shadow(color: .black.opacity(0.1), radius: 8)
@@ -96,7 +97,7 @@ struct AddRecipeView: View {
                 } else {
                     Circle()
                         .fill(Color.orange.opacity(0.1))
-                        .frame(width: 200, height: 200)
+                        .frame(width: min(200, UIScreen.main.bounds.width - 40), height: min(200, UIScreen.main.bounds.width - 40))
                         .overlay {
                             Image(systemName: "fork.knife.circle.fill")
                                 .font(.system(size: 60))
@@ -125,7 +126,7 @@ struct AddRecipeView: View {
                         .offset(x: -8, y: -8)
                     }
                 }
-                .frame(width: 200, height: 200)
+                .frame(width: min(200, UIScreen.main.bounds.width - 40), height: min(200, UIScreen.main.bounds.width - 40))
             }
             
             // Recipe name input
@@ -139,6 +140,8 @@ struct AddRecipeView: View {
                 .onSubmit {
                     isDescriptionFocused = true
                 }
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
             
             // Stats row
             statsRow
@@ -155,15 +158,18 @@ struct AddRecipeView: View {
                     difficultyControl
                 }
             } else {
-                HStack(spacing: 24) {
+                HStack(spacing: 16) {
                     timeControl
+                    Divider().frame(height: 40)
                     servingsControl
+                    Divider().frame(height: 40)
                     difficultyControl
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.vertical, 16)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, dynamicTypeSize > .large ? 8 : 16)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(colorScheme == .dark ? 
@@ -171,7 +177,6 @@ struct AddRecipeView: View {
                       Color(UIColor.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
-        .padding(.horizontal, 20)
     }
     
     private var timeControl: some View {
@@ -180,7 +185,7 @@ struct AddRecipeView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundColor(.secondary)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Button(action: {
                     if timeInMinutes > 5 {
                         timeInMinutes -= 5
@@ -188,7 +193,7 @@ struct AddRecipeView: View {
                 }) {
                     Image(systemName: "minus")
                         .foregroundColor(timeInMinutes <= 5 ? .secondary : .primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
                         .background(
                             Circle()
                                 .fill(Color.secondary.opacity(0.1))
@@ -200,11 +205,12 @@ struct AddRecipeView: View {
                 VStack(spacing: 2) {
                     Text("\(timeInMinutes)")
                         .font(.headline)
+                        .minimumScaleFactor(0.8)
                     Text("min")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                .frame(minWidth: 50)
+                .frame(minWidth: 40)
                 .accessibilityLabel("\(timeInMinutes) minutes cooking time")
                 
                 Button(action: {
@@ -214,7 +220,7 @@ struct AddRecipeView: View {
                 }) {
                     Image(systemName: "plus")
                         .foregroundColor(timeInMinutes >= 480 ? .secondary : .primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
                         .background(
                             Circle()
                                 .fill(Color.secondary.opacity(0.1))
@@ -224,6 +230,7 @@ struct AddRecipeView: View {
                 .accessibilityLabel("Increase cooking time")
             }
         }
+        .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
     }
     
     private var servingsControl: some View {
@@ -232,7 +239,7 @@ struct AddRecipeView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundColor(.secondary)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Button(action: { 
                     if servings > 1 {
                         servings -= 1
@@ -240,7 +247,7 @@ struct AddRecipeView: View {
                 }) {
                     Image(systemName: "minus")
                         .foregroundColor(servings <= 1 ? .secondary : .primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
                         .background(
                             Circle()
                                 .fill(Color.secondary.opacity(0.1))
@@ -252,11 +259,12 @@ struct AddRecipeView: View {
                 VStack(spacing: 2) {
                     Text("\(servings)")
                         .font(.headline)
+                        .minimumScaleFactor(0.8)
                     Text("serve")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                .frame(minWidth: 50)
+                .frame(minWidth: 40)
                 .accessibilityLabel("\(servings) servings")
                 
                 Button(action: { 
@@ -266,7 +274,7 @@ struct AddRecipeView: View {
                 }) {
                     Image(systemName: "plus")
                         .foregroundColor(servings >= 20 ? .secondary : .primary)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 36, height: 36)
                         .background(
                             Circle()
                                 .fill(Color.secondary.opacity(0.1))
@@ -276,6 +284,7 @@ struct AddRecipeView: View {
                 .accessibilityLabel("Increase servings")
             }
         }
+        .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
     }
     
     private var difficultyControl: some View {
@@ -306,8 +315,11 @@ struct AddRecipeView: View {
                     Text(difficulty.rawValue)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 .padding(.horizontal, 8)
+                .padding(.vertical, 4)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.secondary.opacity(0.1))
@@ -315,6 +327,7 @@ struct AddRecipeView: View {
                 .contentShape(Rectangle())
             }
             .accessibilityLabel("Select difficulty: \(difficulty.rawValue)")
+            .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
         }
     }
     
@@ -333,7 +346,6 @@ struct AddRecipeView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(.horizontal, 20)
             
             TextEditor(text: $description)
                 .frame(minHeight: 120)
@@ -350,7 +362,6 @@ struct AddRecipeView: View {
                         .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                 )
                 .focused($isDescriptionFocused)
-                .padding(.horizontal, 20)
                 .accessibilityLabel("Recipe description")
         }
     }
@@ -383,7 +394,6 @@ struct AddRecipeView: View {
                 }
                 .accessibilityLabel("Add ingredients")
             }
-            .padding(.horizontal, 20)
             
             if selectedIngredients.isEmpty {
                 emptyIngredientsView
@@ -425,36 +435,69 @@ struct AddRecipeView: View {
                       Color(UIColor.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
-        .padding(.horizontal, 20)
     }
     
     private var ingredientsList: some View {
         VStack(spacing: 0) {
             ForEach($selectedIngredients) { $ingredient in
-                HStack {
-                    Text(ingredient.ingredient.name ?? "")
-                        .font(.body)
-                        .lineLimit(1)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 12) {
-                        TextField("Qty", value: $ingredient.quantity, format: .number)
-                            .keyboardType(.decimalPad)
-                            .frame(width: 60)
-                            .multilineTextAlignment(.trailing)
-                            .padding(8)
-                            .background(Color.secondary.opacity(0.1))
-                            .cornerRadius(8)
-                        
-                        Picker("Unit", selection: $ingredient.unit) {
-                            ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
-                                Text(unit.displayName).tag(unit)
+                VStack {
+                    if dynamicTypeSize > .large {
+                        // Vertical layout for larger text sizes
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(ingredient.ingredient.name ?? "")
+                                .font(.body)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 12) {
+                                TextField("Qty", value: $ingredient.quantity, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .frame(width: 60)
+                                    .multilineTextAlignment(.trailing)
+                                    .padding(8)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .cornerRadius(8)
+                                
+                                Picker("Unit", selection: $ingredient.unit) {
+                                    ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                        Text(unit.displayName).tag(unit)
+                                    }
+                                }
+                                .foregroundColor(.orange)
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: 120)
+                                
+                                Spacer()
                             }
                         }
-                        .foregroundColor(.orange)
-                        .pickerStyle(.menu)
-                        .frame(width: 120)
+                    } else {
+                        // Horizontal layout for normal text sizes
+                        HStack {
+                            Text(ingredient.ingredient.name ?? "")
+                                .font(.body)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 12) {
+                                TextField("Qty", value: $ingredient.quantity, format: .number)
+                                    .keyboardType(.decimalPad)
+                                    .frame(width: 60)
+                                    .multilineTextAlignment(.trailing)
+                                    .padding(8)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .cornerRadius(8)
+                                
+                                Picker("Unit", selection: $ingredient.unit) {
+                                    ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
+                                        Text(unit.displayName).tag(unit)
+                                    }
+                                }
+                                .foregroundColor(.orange)
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: 120)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 12) // Increased for better hit target
@@ -492,7 +535,6 @@ struct AddRecipeView: View {
                       Color(UIColor.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
-        .padding(.horizontal, 20)
     }
     
     private var headerOverlay: some View {
@@ -518,6 +560,8 @@ struct AddRecipeView: View {
             Text("New Recipe")
                 .font(.headline)
                 .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             
             Spacer()
             
@@ -564,6 +608,9 @@ struct AddRecipeView: View {
                 .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
                 .edgesIgnoringSafeArea(.bottom)
         )
+        .accessibilityHint(name.isEmpty || selectedIngredients.isEmpty ? 
+                          "Disabled. Recipe name and ingredients are required." : 
+                          "Creates the recipe and saves it")
     }
     
     // MARK: - Helper Functions

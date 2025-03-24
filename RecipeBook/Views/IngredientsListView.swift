@@ -59,11 +59,11 @@ struct IngredientsListView: View {
                         showingAddSheet = true
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "plus")
+                        Image(systemName: "plus")
                             Text("Add")
                         }
                         .font(.headline)
-                        .foregroundColor(.orange)
+                            .foregroundColor(.orange)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 12)
                         .background(
@@ -78,7 +78,7 @@ struct IngredientsListView: View {
             }
             .sheet(isPresented: $showingAddSheet) {
                 NavigationStack {
-                    IngredientFormView(mode: .add)
+                IngredientFormView(mode: .add)
                 }
             }
             .alert("Delete Ingredient", isPresented: $showingDeleteAlert) {
@@ -363,33 +363,33 @@ struct IngredientsListView_Previews: PreviewProvider {
     }
     
     static func createPreviewContext() -> NSManagedObjectContext {
-        let context = PersistenceController.preview.container.viewContext
-        
-        // Create sample ingredients
-        let flour = Ingredient(context: context)
-        flour.name = "Flour"
-        flour.desc = "All-purpose flour"
-        
-        let sugar = Ingredient(context: context)
-        sugar.name = "Sugar"
-        sugar.desc = "Granulated sugar"
-        
-        let butter = Ingredient(context: context)
-        butter.name = "Butter"
-        butter.desc = "Unsalted butter"
-        
-        // Create a sample recipe to show "Used in X recipes"
-        let recipe = Recipe(context: context)
-        recipe.name = "Cookies"
-        
-        let recipeIngredient = RecipeIngredient(context: context)
-        recipeIngredient.ingredient = flour
-        recipeIngredient.recipe = recipe
-        recipeIngredient.quantity = 250
-        recipeIngredient.unit = "grams"
-        
-        try? context.save()
-        
+    let context = PersistenceController.preview.container.viewContext
+    
+    // Create sample ingredients
+    let flour = Ingredient(context: context)
+    flour.name = "Flour"
+    flour.desc = "All-purpose flour"
+    
+    let sugar = Ingredient(context: context)
+    sugar.name = "Sugar"
+    sugar.desc = "Granulated sugar"
+    
+    let butter = Ingredient(context: context)
+    butter.name = "Butter"
+    butter.desc = "Unsalted butter"
+    
+    // Create a sample recipe to show "Used in X recipes"
+    let recipe = Recipe(context: context)
+    recipe.name = "Cookies"
+    
+    let recipeIngredient = RecipeIngredient(context: context)
+    recipeIngredient.ingredient = flour
+    recipeIngredient.recipe = recipe
+    recipeIngredient.quantity = 250
+    recipeIngredient.unit = "grams"
+    
+    try? context.save()
+    
         return context
     }
 } 

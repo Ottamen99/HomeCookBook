@@ -64,18 +64,15 @@ struct CookingModeView: View {
                         // Current step ingredients
                         if !currentStepIngredients.isEmpty {
                             currentStepIngredientsSection
-                                .padding(.horizontal)
                         }
                         
                         // Toggle for showing/hiding completed steps
                         if !completedSteps.isEmpty && completedSteps.count < recipe.stepsArray.count {
                             toggleCompletedStepsButton
-                                .padding(.horizontal)
                         }
                         
                         // All ingredients
                         allIngredientsSection
-                            .padding(.horizontal)
                         
                         // Steps
                         stepsSection
@@ -86,8 +83,11 @@ struct CookingModeView: View {
                         }
                     }
                     .padding(.top, 16)
+                    .padding(.horizontal)
                 }
                 .scrollIndicators(.visible)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemGroupedBackground))
                 
                 // Completion button
                 if completedSteps.count == recipe.stepsArray.count {
@@ -102,7 +102,8 @@ struct CookingModeView: View {
                         dismiss()
                     } label: {
                         Label("Cancel", systemImage: "xmark.circle.fill")
-                            .foregroundColor(.primary)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
                     }
                     .accessibilityLabel("Cancel cooking mode")
                 }
@@ -126,31 +127,36 @@ struct CookingModeView: View {
     
     private var progressSection: some View {
         VStack(spacing: 16) {
-            // Progress circle
+            // Progress circle with added animation
             ZStack {
                 Circle()
-                    .fill(Color.orange.opacity(0.1))
+                    .fill(.thinMaterial)
                     .frame(width: min(250, UIScreen.main.bounds.width - 40), height: min(250, UIScreen.main.bounds.width - 40))
                 
                 Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 12)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 12)
                     .frame(width: min(200, UIScreen.main.bounds.width - 80), height: min(200, UIScreen.main.bounds.width - 80))
                 
                 Circle()
                     .trim(from: 0, to: progress)
-                    .stroke(Color.orange, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                     .frame(width: min(200, UIScreen.main.bounds.width - 80), height: min(200, UIScreen.main.bounds.width - 80))
                     .rotationEffect(.degrees(-90))
+                    .animation(.spring(response: 0.6), value: progress)
                 
                 VStack(spacing: 4) {
                     Text("\(Int(progress * 100))%")
                         .font(.system(size: 44, weight: .bold, design: .rounded))
                         .minimumScaleFactor(0.7)
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.4), value: progress)
                     
                     Text("\(completedSteps.count) of \(recipe.stepsArray.count)")
                         .font(.title3)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.4), value: completedSteps.count)
                 }
                 .padding()
             }
@@ -161,89 +167,87 @@ struct CookingModeView: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.9)
-                .padding(.horizontal)
         }
         .padding(.bottom, 8)
     }
     
     private var currentStepIngredientsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Label("Current Step Ingredients", systemImage: "list.bullet.circle.fill")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("Step \(currentStepIndex + 1)")
-                    .font(.subheadline.bold())
-                    .foregroundColor(.orange)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(Color.orange.opacity(0.1))
-                    )
-            }
-            
-            Divider()
-            
-            ForEach(currentStepIngredients) { ingredient in
-                HStack(spacing: 12) {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 18))
-                        .accessibilityHidden(true)
+        GroupBox {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Label("Current Step Ingredients", systemImage: "list.bullet.circle.fill")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .symbolRenderingMode(.hierarchical)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(ingredient.ingredient?.name ?? "")
-                            .font(.body.bold())
-                            .foregroundColor(.primary)
-                        
-                        Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "")")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+                    Spacer()
+                    
+                    Text("Step \(currentStepIndex + 1)")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.accentColor)
+                        )
                 }
-                .padding(.vertical, 4)
+                
+                Divider()
+                
+                ForEach(currentStepIngredients) { ingredient in
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 18))
+                            .symbolRenderingMode(.hierarchical)
+                            .accessibilityHidden(true)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(ingredient.ingredient?.name ?? "")
+                                .font(.body.bold())
+                                .foregroundStyle(.primary)
+                            
+                            Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "")")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
             }
+        } label: {
+            // Empty label to maintain consistent styling with iOS standards
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.secondarySystemBackground) : 
-                      Color(UIColor.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
+        .groupBoxStyle(CardGroupBoxStyle())
     }
     
     private var toggleCompletedStepsButton: some View {
         Button {
-            withAnimation {
+            withAnimation(.spring(response: 0.4)) {
                 showCompletedSteps.toggle()
             }
         } label: {
-            HStack {
-                Text(showCompletedSteps ? "Hide Completed Steps" : "Show Completed Steps")
-                    .font(.subheadline.bold())
-                
-                Image(systemName: showCompletedSteps ? "eye.slash" : "eye")
-            }
-            .foregroundColor(.primary)
+            Label(
+                showCompletedSteps ? "Hide Completed Steps" : "Show Completed Steps",
+                systemImage: showCompletedSteps ? "eye.slash" : "eye"
+            )
+            .font(.subheadline.bold())
+            .foregroundStyle(.primary)
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.secondary.opacity(0.1))
+                    .fill(.ultraThinMaterial)
             )
         }
+        .buttonStyle(.borderless)
         .accessibilityHint(showCompletedSteps ? "Hides steps you've already completed" : "Shows all steps including completed ones")
     }
     
     private var allIngredientsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        GroupBox {
             DisclosureGroup {
                 VStack(alignment: .leading, spacing: 12) {
                     Divider()
@@ -252,13 +256,13 @@ struct CookingModeView: View {
                         HStack {
                             Text(ingredient.ingredient?.name ?? "")
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             
                             Spacer()
                             
                             Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit ?? "")")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 6)
                     }
@@ -267,17 +271,13 @@ struct CookingModeView: View {
             } label: {
                 Label("All Ingredients", systemImage: "tray.full")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
+                    .symbolRenderingMode(.hierarchical)
             }
+        } label: {
+            // Empty label to maintain consistent styling with iOS standards
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.secondarySystemBackground) : 
-                      Color(UIColor.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
+        .groupBoxStyle(CardGroupBoxStyle())
     }
     
     private var stepsSection: some View {
@@ -285,37 +285,39 @@ struct CookingModeView: View {
             HStack {
                 Text("Steps")
                     .font(.title3.bold())
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
                 
                 Spacer()
                 
                 if !sortedAndFilteredSteps.isEmpty {
                     Text("\(sortedAndFilteredSteps.count) \(sortedAndFilteredSteps.count == 1 ? "step" : "steps")")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal)
             
             if sortedAndFilteredSteps.isEmpty {
                 emptyStepsView
             } else {
-                ForEach(sortedAndFilteredSteps) { step in
-                    let status = getStepStatus(step)
-                    
-                    CookingStepView(
-                        recipe: recipe,
-                        step: step,
-                        isCompleted: status.isCompleted,
-                        isActive: status.isActive,
-                        isFirst: step == recipe.stepsArray.first,
-                        isLast: step == recipe.stepsArray.last,
-                        onToggleComplete: { completed in
-                            toggleStepCompletion(step, completed: completed)
-                        },
-                        canComplete: status.canComplete
-                    )
-                    .id(step.id)
+                LazyVStack(spacing: 16) {
+                    ForEach(sortedAndFilteredSteps) { step in
+                        let status = getStepStatus(step)
+                        
+                        CookingStepView(
+                            recipe: recipe,
+                            step: step,
+                            isCompleted: status.isCompleted,
+                            isActive: status.isActive,
+                            isFirst: step == recipe.stepsArray.first,
+                            isLast: step == recipe.stepsArray.last,
+                            onToggleComplete: { completed in
+                                toggleStepCompletion(step, completed: completed)
+                            },
+                            canComplete: status.canComplete
+                        )
+                        .id(step.id)
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                    }
                 }
             }
         }
@@ -323,71 +325,64 @@ struct CookingModeView: View {
     }
     
     private var emptyStepsView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 50))
-                .foregroundColor(.green)
-                .accessibilityHidden(true)
-            
-            Text("All steps completed!")
-                .font(.headline)
-                .foregroundColor(.primary)
-            
-            Text("You've completed all the steps for this recipe.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            Button {
-                withAnimation {
-                    showCompletedSteps = true
-                }
-            } label: {
-                Text("Show All Steps")
+        GroupBox {
+            VStack(spacing: 16) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 50))
+                    .foregroundStyle(.green)
+                    .symbolRenderingMode(.hierarchical)
+                    .accessibilityHidden(true)
+                
+                Text("All steps completed!")
                     .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(height: 44)
-                    .frame(maxWidth: 200)
-                    .background(Color.green)
-                    .cornerRadius(10)
+                    .foregroundStyle(.primary)
+                
+                Text("You've completed all the steps for this recipe.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                
+                Button {
+                    withAnimation(.spring(response: 0.4)) {
+                        showCompletedSteps = true
+                    }
+                } label: {
+                    Text("Show All Steps")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(height: 44)
+                        .frame(maxWidth: 200)
+                        .background(Color.green)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
             }
+            .padding()
+            .frame(maxWidth: .infinity)
+        } label: {
+            // Empty label to maintain consistent styling with iOS standards
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.secondarySystemBackground) : 
-                      Color(UIColor.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
-        .padding(.horizontal)
+        .groupBoxStyle(CardGroupBoxStyle())
     }
     
     private var finishCookingButton: some View {
         Button {
             dismiss()
         } label: {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                Text("Finish Cooking")
-            }
-            .font(.headline)
-            .fontWeight(.semibold)
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54) // Taller button for better hit target
-            .background(Color.green)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+            Label("Finish Cooking", systemImage: "checkmark.circle.fill")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54) // Taller button for better hit target (44pt minimum)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+        .buttonStyle(.bordered)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(
             Rectangle()
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.systemBackground) : 
-                      Color.white)
+                .fill(.thinMaterial)
                 .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
                 .edgesIgnoringSafeArea(.bottom)
         )
@@ -398,12 +393,16 @@ struct CookingModeView: View {
     // MARK: - Helper Functions
     
     private func toggleStepCompletion(_ step: Step, completed: Bool) {
-        withAnimation {
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.prepare()
+        
+        withAnimation(.spring(response: 0.4)) {
             let stepOrder = Int(step.order)
             if completed {
                 // Only allow completion if previous step is completed
                 if stepOrder == 0 || completedSteps.contains(stepOrder - 1) {
                     completedSteps.insert(stepOrder)
+                    impact.impactOccurred()
                     if currentStepIndex < recipe.stepsArray.count - 1 {
                         currentStepIndex = stepOrder + 1
                     }
@@ -413,6 +412,7 @@ struct CookingModeView: View {
                 let laterStepsCompleted = completedSteps.contains { $0 > stepOrder }
                 if !laterStepsCompleted {
                     completedSteps.remove(stepOrder)
+                    impact.impactOccurred(intensity: 0.7)
                 }
             }
         }
@@ -437,88 +437,105 @@ struct CookingStepView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             // Timeline visualization
-            VStack(spacing: 0) {
-                // Top connector line
-                if !isFirst {
-                    Rectangle()
-                        .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
-                        .frame(width: 2)
-                        .frame(height: 24)
-                }
-                
-                // Circle indicator
-                ZStack {
-                    Circle()
-                        .fill(backgroundColor)
-                        .frame(width: 26, height: 26)
-                    
-                    if isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                    } else {
-                        Text("\(Int(step.order) + 1)")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(isActive ? .white : .primary)
-                    }
-                }
-                .accessibilityHidden(true)
-                
-                // Bottom connector line
-                if !isLast {
-                    Rectangle()
-                        .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
-                        .frame(width: 2)
-                        .frame(height: 24)
-                }
-            }
-            .padding(.top, 8)
+            timelineView
             
             // Step content
-            VStack(alignment: .leading, spacing: 12) {
-                // Step description
-                Text(step.instructions ?? "")
-                    .font(.body)
-                    .foregroundColor(isCompleted ? .secondary : .primary)
-                    .strikethrough(isCompleted, color: .secondary)
-                    .padding(.top, 8)
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                // Complete/Uncomplete button
-                Button {
-                    onToggleComplete(!isCompleted)
-                } label: {
-                    HStack {
-                        Image(systemName: isCompleted ? "arrow.uturn.backward" : "checkmark")
-                        Text(isCompleted ? "Mark as Incomplete" : "Mark as Complete")
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(isCompleted ? .primary : .white)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(
-                        Capsule()
-                            .fill(isCompleted ? Color.secondary.opacity(0.2) : Color.green)
-                    )
-                    .contentShape(Capsule())
-                }
-                .disabled(!canComplete && !isCompleted)
-                .opacity(canComplete || isCompleted ? 1.0 : 0.5)
-                .accessibilityHint(canComplete || isCompleted ? 
-                                  (isCompleted ? "Marks this step as not completed" : "Marks this step as completed") : 
-                                  "Complete previous steps first")
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(colorScheme == .dark ? 
-                          Color(UIColor.secondarySystemBackground) : 
-                          Color(UIColor.systemBackground))
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-            )
+            stepContentView
         }
-        .padding(.horizontal)
+    }
+    
+    // MARK: - Extracted Views
+    
+    private var timelineView: some View {
+        VStack(spacing: 0) {
+            // Top connector line
+            if !isFirst {
+                Rectangle()
+                    .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
+                    .frame(width: 2)
+                    .frame(height: 24)
+            }
+            
+            // Circle indicator
+            stepCircleIndicator
+            
+            // Bottom connector line
+            if !isLast {
+                Rectangle()
+                    .fill(isCompleted ? Color.green : Color.gray.opacity(0.3))
+                    .frame(width: 2)
+                    .frame(height: 24)
+            }
+        }
+        .padding(.top, 8)
+    }
+    
+    private var stepCircleIndicator: some View {
+        ZStack {
+            Circle()
+                .fill(backgroundColor)
+                .frame(width: 26, height: 26)
+            
+            if isCompleted {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+            } else {
+                Text("\(Int(step.order) + 1)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(isActive ? .white : .primary)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+    
+    private var stepContentView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Step description
+            Text(step.instructions ?? "")
+                .font(.body)
+                .foregroundColor(isCompleted ? .secondary : .primary)
+                .strikethrough(isCompleted, color: .secondary)
+                .padding(.top, 8)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            // Complete/Uncomplete button
+            stepActionButton
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(colorScheme == .dark ? 
+                      Color(UIColor.secondarySystemBackground) : 
+                      Color(UIColor.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+    }
+    
+    private var stepActionButton: some View {
+        Button {
+            onToggleComplete(!isCompleted)
+        } label: {
+            HStack {
+                Image(systemName: isCompleted ? "arrow.uturn.backward" : "checkmark")
+                Text(isCompleted ? "Mark as Incomplete" : "Mark as Complete")
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(isCompleted ? .primary : .white)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(
+                Capsule()
+                    .fill(isCompleted ? Color.secondary.opacity(0.2) : Color.green)
+            )
+            .contentShape(Capsule())
+        }
+        .disabled(!canComplete && !isCompleted)
+        .opacity(canComplete || isCompleted ? 1.0 : 0.5)
+        .accessibilityHint(canComplete || isCompleted ? 
+                          (isCompleted ? "Marks this step as not completed" : "Marks this step as completed") : 
+                          "Complete previous steps first")
     }
     
     private var backgroundColor: Color {
@@ -529,6 +546,22 @@ struct CookingStepView: View {
         } else {
             return Color.gray.opacity(0.3)
         }
+    }
+}
+
+// Custom GroupBox style for card-like appearance
+struct CardGroupBoxStyle: GroupBoxStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading) {
+            configuration.label
+            configuration.content
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.regularMaterial)
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
     }
 }
 

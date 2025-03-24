@@ -59,27 +59,31 @@ struct SettingsView: View {
                 } header: {
                     Text("SUPPORT")
                 }
-            }
-            
-            Section("Stats") {
-                NavigationLink {
-                    RecipeStatsView()
-                } label: {
-                    HStack {
-                        Image(systemName: "chart.bar.fill")
-                            .foregroundColor(.orange)
-                        Text("Recipe Statistics")
+                
+                Section {
+                    NavigationLink {
+                        RecipeStatsView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundColor(.orange)
+                                .imageScale(.large)
+                            Text("Recipe Statistics")
+                                .foregroundColor(.primary)
+                        }
                     }
+                } header: {
+                    Text("STATS")
                 }
             }
+            .navigationTitle("Settings")
+            .alert("Contact Support", isPresented: $showingEmailAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please send an email to:\n\(supportEmail)")
+            }
+            .tint(.orange)
         }
-        .navigationTitle("Settings")
-        .alert("Contact Support", isPresented: $showingEmailAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Please send an email to:\n\(supportEmail)")
-        }
-        .accentColor(.orange)
     }
 }
 

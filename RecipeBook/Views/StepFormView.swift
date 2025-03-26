@@ -8,6 +8,7 @@ struct StepFormView: View {
     
     @State private var instructions = ""
     @State private var selectedIngredientIds: Set<UUID> = []
+    @FocusState private var isInstructionsFocused: Bool
     
     init(step: RecipeStep?, recipeIngredients: [SelectedIngredient], onSave: @escaping (RecipeStep) -> Void) {
         self.step = step
@@ -30,113 +31,121 @@ struct StepFormView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .top) {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Back button row
-                    HStack {
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(.black)
-                                .padding()
-                                .background(Color.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                .shadow(color: .black.opacity(0.1), radius: 5)
-                        }
-                        
-                        Text(title)
+                    // Instructions section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Instructions", systemImage: "text.justify")
                             .font(.headline)
-                            .padding(.leading, 8)
                         
-                        Spacer()
+                        TextEditor(text: $instructions)
+                            .frame(minHeight: 120)
+                            .padding(12)
+                            .background(.regularMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .focused($isInstructionsFocused)
                     }
                     .padding(.horizontal)
-                    .padding(.top, 8)
-                    
-                    // Instructions section
-                    VStack(alignment: .leading, spacing: 16) {
-                        TextEditor(text: $instructions)
-                            .frame(minHeight: 100, maxHeight: 200)
-                            .scrollContentBackground(.hidden)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                    }
-                    .padding()
                     
                     // Used Ingredients section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Used Ingredients")
-                            .font(.title2)
-                            .fontWeight(.bold)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Used Ingredients", systemImage: "checklist")
+                            .font(.headline)
                         
                         ForEach(recipeIngredients) { ingredient in
                             ingredientRow(ingredient)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                                )
                         }
                     }
-                    .padding()
-                    
-                    // Add padding for the bottom button
-                    Color.clear.frame(height: 100)
+                    .padding(.horizontal)
                 }
+                .padding(.vertical, 20)
             }
-            
-            // Bottom save button with solid background
-            VStack {
-                Spacer()
-                
-                ZStack {
-                    Rectangle()
-                        .fill(Color(.systemBackground))
-                        .edgesIgnoringSafeArea(.bottom)
-                        .frame(height: 100)
-                        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
-                    
-                    Button(action: saveStep) {
-                        Text("Save Step")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.black)
-                            .cornerRadius(12)
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
                     }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveWithHapticFeedback()
+                    }
+                    .fontWeight(.semibold)
                     .disabled(instructions.isEmpty)
-                    .padding()
+                }
+                
+                ToolbarItem(placement: .keyboard) {
+                    HStack {
+                        Spacer()
+                        Button("Done") {
+                            isInstructionsFocused = false
+                        }
+                    }
                 }
             }
         }
-        .navigationBarHidden(true)
     }
     
     private func ingredientRow(_ ingredient: SelectedIngredient) -> some View {
         let isSelected = selectedIngredientIds.contains(ingredient.id)
+        
         return Button {
-            if isSelected {
-                selectedIngredientIds.remove(ingredient.id)
-            } else {
-                selectedIngredientIds.insert(ingredient.id)
+            withAnimation(.spring(response: 0.3)) {
+                if isSelected {
+                    selectedIngredientIds.remove(ingredient.id)
+                } else {
+                    selectedIngredientIds.insert(ingredient.id)
+                }
             }
+            
+            // Haptic feedback
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
         } label: {
-            HStack {
-                Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit.rawValue) \(ingredient.ingredient.name ?? "")")
-                    .foregroundColor(.primary)
+            HStack(spacing: 16) {
+                // Checkbox
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(isSelected ? .orange : .secondary)
+                    .symbolRenderingMode(.hierarchical)
+                    .animation(.spring(response: 0.3), value: isSelected)
+                
+                // Ingredient details
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(ingredient.ingredient.name ?? "")
+                        .foregroundStyle(.primary)
+                    Text("\(String(format: "%.1f", ingredient.quantity)) \(ingredient.unit.rawValue)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
                 
                 Spacer()
-                
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .orange : .gray)
-                    .font(.title3)
             }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(.regularMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(isSelected ? Color.orange.opacity(0.3) : .clear, lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
     }
     
-    private func saveStep() {
+    private func saveWithHapticFeedback() {
+        // Success haptic
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // Create and save the step
         let selectedIngredients = selectedIngredientIds.compactMap { id in
             recipeIngredients.first { $0.id == id }
         }
@@ -146,6 +155,7 @@ struct StepFormView: View {
             selectedIngredients: selectedIngredients,
             order: step?.order ?? 0
         )
+        
         onSave(newStep)
         dismiss()
     }

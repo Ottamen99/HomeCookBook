@@ -471,7 +471,7 @@ struct ImageNameSection: View {
                         onImageTap()
                     } label: {
                         Circle()
-                            .fill(Color.accentColor)
+                            .fill(Color.orange)
                             .frame(width: 44, height: 44)
                             .overlay {
                                 Image(systemName: image == nil ? "camera.fill" : "pencil")
@@ -684,7 +684,7 @@ struct RecipeStatsSection: View {
                     
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.gray)
                         .frame(width: 44, alignment: .leading)
                 }
                 .frame(width: 164, alignment: .trailing)
@@ -718,6 +718,7 @@ struct IngredientsListSection: View {
                     }
                     .padding()
                     .background(Color(.systemGray6))
+                    .foregroundColor(Color.orange)
                     .cornerRadius(8)
                 }
                 .padding(.horizontal)
@@ -745,7 +746,7 @@ struct IngredientsListSection: View {
                                 }
                                 .pickerStyle(.menu)
                                 .labelsHidden()
-                                .frame(width: 65)
+                                .foregroundColor(.orange)
                             }
                         }
                         .padding()
@@ -760,6 +761,7 @@ struct IngredientsListSection: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color(.systemGray6))
+                            .foregroundColor(Color.orange)
                             .cornerRadius(8)
                     }
                 }
@@ -806,6 +808,7 @@ struct RecipeStepsSection: View {
             }
             .padding()
             .background(Color(.systemGray6))
+            .foregroundColor(Color.orange)
             .cornerRadius(8)
         }
         .padding(.horizontal)
@@ -891,6 +894,7 @@ struct RecipeStepsSection: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color(.systemGray6))
+                .foregroundColor(Color.orange)
                 .cornerRadius(8)
         }
     }

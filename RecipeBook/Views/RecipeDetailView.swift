@@ -531,25 +531,6 @@ struct RecipeDetailView: View {
     }
 }
 
-// MARK: - Supporting Views
-
-private struct DifficultyPill: View {
-    let difficulty: Difficulty
-    
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: difficulty.icon)
-            Text(difficulty.rawValue)
-        }
-        .font(.subheadline)
-        .foregroundColor(.white)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(difficulty.color)
-        .clipShape(Capsule())
-    }
-}
-
 #Preview {
     let context = PersistenceController.preview.container.viewContext
     

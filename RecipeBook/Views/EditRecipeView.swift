@@ -11,6 +11,7 @@ class EditRecipeViewModel: ObservableObject {
     @Published var image: UIImage?
     @Published var steps: [RecipeStep] = []
     @Published var hasChanges = false
+    @Published var difficulty: Difficulty
     
     let recipe: Recipe
     
@@ -20,6 +21,7 @@ class EditRecipeViewModel: ObservableObject {
         self.description = recipe.desc ?? ""
         self.timeInMinutes = recipe.timeInMinutes
         self.servings = recipe.servings
+        self.difficulty = Difficulty(rawValue: recipe.difficulty ?? Difficulty.easy.rawValue) ?? .easy
         
         // Initialize image if exists
         if let imageData = recipe.imageData {
@@ -75,6 +77,7 @@ class EditRecipeViewModel: ObservableObject {
             self.recipe.desc = self.description
             self.recipe.timeInMinutes = self.timeInMinutes
             self.recipe.servings = self.servings
+            self.recipe.difficulty = self.difficulty.rawValue
             
             // Save image data
             if let image = self.image {
@@ -295,10 +298,11 @@ struct FormContent: View {
                 }
                 .padding(.horizontal)
                 
-                // Recipe stats
+                // Recipe stats with difficulty
                 RecipeStatsSection(
                     timeInMinutes: $viewModel.timeInMinutes,
                     servings: $viewModel.servings,
+                    difficulty: $viewModel.difficulty,
                     formatTime: viewModel.formatTime
                 )
                 
@@ -500,91 +504,194 @@ struct ImageNameSection: View {
 struct RecipeStatsSection: View {
     @Binding var timeInMinutes: Int16
     @Binding var servings: Int16
+    @Binding var difficulty: Difficulty
     let formatTime: (Int16) -> String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Section header
-            HStack {
-                Image(systemName: "stopwatch")
-                Text("Recipe Details").font(.headline)
-            }
-            .padding(.horizontal)
+            Label("Recipe Details", systemImage: "stopwatch")
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .padding(.horizontal)
             
-            // Content in a VStack
-            VStack(spacing: 12) {
-                // Cooking time row - extracted to a simple view
+            // Stats container
+            VStack(spacing: 0) {
+                // Cooking time row
                 cookingTimeRow
                 
                 Divider()
+                    .padding(.horizontal)
                 
-                // Servings row - extracted to a simple view
+                // Servings row
                 servingsRow
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Difficulty row
+                difficultyRow
             }
-            .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
         }
     }
     
-    // Break down complex expressions into separate views
     private var cookingTimeRow: some View {
-        HStack {
-            Label("Cooking Time", systemImage: "clock")
-                .foregroundColor(.primary)
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Cooking Time")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "clock")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
+            }
             
             Spacer()
             
-            // Simplify the stepper
-            timeStepper
-        }
-    }
-    
-    private var timeStepper: some View {
-        Stepper {
-            Text(formatTime(timeInMinutes))
-                .foregroundColor(.secondary)
-                .frame(width: 80, alignment: .trailing)
-        } onIncrement: {
-            if timeInMinutes < 480 {
-                timeInMinutes += 5
+            // Time stepper with fixed width for better alignment
+            HStack(spacing: 8) {
+                Text(formatTime(timeInMinutes))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 65, alignment: .trailing)
+                    .monospacedDigit()
+                
+                // Custom stepper buttons for better control
+                HStack(spacing: 0) {
+                    Button {
+                        if timeInMinutes > 5 {
+                            timeInMinutes -= 5
+                        } else if timeInMinutes > 1 {
+                            timeInMinutes = 1
+                        }
+                    } label: {
+                        Image(systemName: "minus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(timeInMinutes <= 1)
+                    
+                    Button {
+                        if timeInMinutes < 480 {
+                            timeInMinutes += 5
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(timeInMinutes >= 480)
+                }
+                .foregroundStyle(.primary)
+                .buttonStyle(.plain)
             }
-        } onDecrement: {
-            if timeInMinutes > 5 {
-                timeInMinutes -= 5
-            } else if timeInMinutes > 1 {
-                timeInMinutes = 1
-            }
         }
+        .padding(.horizontal, 16)
+        .frame(height: 54)
     }
     
     private var servingsRow: some View {
-        HStack {
-            Label("Servings", systemImage: "person.2")
-                .foregroundColor(.primary)
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Servings")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "person.2")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
+            }
             
             Spacer()
             
-            // Simplify the stepper
-            servingStepper
+            // Servings stepper with fixed width for better alignment
+            HStack(spacing: 8) {
+                Text("\(servings)")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 65, alignment: .trailing)
+                    .monospacedDigit()
+                
+                // Custom stepper buttons
+                HStack(spacing: 0) {
+                    Button {
+                        if servings > 1 {
+                            servings -= 1
+                        }
+                    } label: {
+                        Image(systemName: "minus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(servings <= 1)
+                    
+                    Button {
+                        if servings < 20 {
+                            servings += 1
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(servings >= 20)
+                }
+                .foregroundStyle(.primary)
+                .buttonStyle(.plain)
+            }
         }
+        .padding(.horizontal, 16)
+        .frame(height: 54)
     }
     
-    private var servingStepper: some View {
-        Stepper {
-            Text("\(servings) \(servings == 1 ? "serving" : "servings")")
-                .foregroundColor(.secondary)
-                .frame(width: 80, alignment: .trailing)
-        } onIncrement: {
-            if servings < 20 {
-                servings += 1
+    private var difficultyRow: some View {
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Difficulty")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "gauge.medium")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
             }
-        } onDecrement: {
-            if servings > 1 {
-                servings -= 1
+            
+            Spacer()
+            
+            // Difficulty picker
+            Menu {
+                ForEach(Difficulty.allCases, id: \.self) { level in
+                    Button {
+                        difficulty = level
+                    } label: {
+                        if difficulty == level {
+                            Label(level.rawValue.capitalized, systemImage: "checkmark")
+                        } else {
+                            Text(level.rawValue.capitalized)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    DifficultyPill(difficulty: difficulty)
+                        .frame(width: 120, alignment: .trailing)
+                    
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, alignment: .leading)
+                }
+                .frame(width: 164, alignment: .trailing)
             }
         }
+        .padding(.leading, 16)
+        .frame(height: 54)
     }
 }
 
@@ -622,8 +729,8 @@ struct IngredientsListSection: View {
                             Text(ingredient.ingredient.name ?? "")
                                         .font(.body)
                             }
-                                    
-                                    Spacer()
+                            
+                            Spacer()
                                     
                             HStack(spacing: 4) {
                                     TextField("Qty", value: $ingredient.quantity, format: .number)

@@ -27,83 +27,88 @@ struct AddRecipeView: View {
     // MARK: - Body
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Recipe image and basic info
-                recipeImageSection
-                
-                // Description section
-                descriptionSection
-                
-                // Ingredients section
-                ingredientsSection
-                
-                // Add the steps section
-                stepsSection
-            }
-            .padding(.top, 16)
-            .padding(.horizontal, dynamicTypeSize > .large ? 12 : 16)
-        }
-        .scrollIndicators(.visible)
-        .dismissKeyboardOnTap()
-        .navigationTitle("New Recipe")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Recipe image and basic info
+                    recipeImageSection
+                    
+                    // Description section
+                    descriptionSection
+                    
+                    // Ingredients section
+                    ingredientsSection
+                    
+                    // Steps section
+                    stepsSection
+                    
+                    // Add some bottom padding
+                    Color.clear.frame(height: 20)
                 }
+                .padding(.top, 16)
+                .padding(.horizontal, dynamicTypeSize > .large ? 12 : 16)
             }
-            
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    saveRecipe()
-                    dismiss()
+            .scrollIndicators(.visible)
+            .dismissKeyboardOnTap()
+            .navigationTitle("Create new recipe")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
                 }
-                .bold()
-                .disabled(name.isEmpty || selectedIngredients.isEmpty)
-            }
-            
-            ToolbarItem(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        isNameFocused = false
-                        isDescriptionFocused = false
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveRecipe()
+                        dismiss()
+                    }
+                    .bold()
+                    .disabled(name.isEmpty || selectedIngredients.isEmpty)
+                }
+                
+                ToolbarItem(placement: .keyboard) {
+                    HStack {
+                        Spacer()
+                        Button("Done") {
+                            isNameFocused = false
+                            isDescriptionFocused = false
+                        }
                     }
                 }
             }
-        }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .ingredients:
-                NavigationStack {
-                    IngredientSelectionView(selectedIngredients: $selectedIngredients)
-                }
-            case .imagePicker:
-                ImagePicker(image: $image)
-            case .step(let stepSheet):
-                NavigationStack {
-                    switch stepSheet {
-                    case .add:
-                        StepFormView(
-                            step: nil,
-                            recipeIngredients: selectedIngredients
-                        ) { newStep in
-                            steps.append(newStep)
-                            updateStepOrder()
-                            activeSheet = nil
-                        }
-                    case .edit(let step):
-                        StepFormView(
-                            step: step,
-                            recipeIngredients: selectedIngredients
-                        ) { newStep in
-                            if let index = steps.firstIndex(where: { $0.id == step.id }) {
-                                steps[index] = newStep
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .ingredients:
+                    NavigationStack {
+                        IngredientSelectionView(selectedIngredients: $selectedIngredients)
+                    }
+                case .imagePicker:
+                    ImagePicker(image: $image)
+                case .step(let stepSheet):
+                    NavigationStack {
+                        switch stepSheet {
+                        case .add:
+                            StepFormView(
+                                step: nil,
+                                recipeIngredients: selectedIngredients
+                            ) { newStep in
+                                steps.append(newStep)
+                                updateStepOrder()
+                                activeSheet = nil
                             }
-                            updateStepOrder()
-                            activeSheet = nil
+                        case .edit(let step):
+                            StepFormView(
+                                step: step,
+                                recipeIngredients: selectedIngredients
+                            ) { newStep in
+                                if let index = steps.firstIndex(where: { $0.id == step.id }) {
+                                    steps[index] = newStep
+                                }
+                                updateStepOrder()
+                                activeSheet = nil
+                            }
                         }
                     }
                 }
@@ -789,9 +794,7 @@ enum AddRecipeSheet: Identifiable {
 #Preview {
     let context = PersistenceController.preview.container.viewContext
     
-    return NavigationStack {
-        AddRecipeView()
-            .environment(\.managedObjectContext, context)
-            .environmentObject(RecipeViewModel(viewContext: context))
-    }
+    return AddRecipeView()
+        .environment(\.managedObjectContext, context)
+        .environmentObject(RecipeViewModel(viewContext: context))
 } 

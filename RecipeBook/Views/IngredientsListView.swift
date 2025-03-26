@@ -17,6 +17,7 @@ struct IngredientsListView: View {
     @State private var searchText = ""
     @State private var showingDeleteAlert = false
     @State private var selectedIngredient: Ingredient?
+    @State private var scrollViewProxy: ScrollViewProxy? = nil
     @AccessibilityFocusState private var isHeaderFocused: Bool
     @AccessibilityFocusState private var isEmptyStateFocused: Bool
     
@@ -32,7 +33,7 @@ struct IngredientsListView: View {
         }
     }
     
-    private var filteredIngredients: [Ingredient] {
+    var filteredIngredients: [Ingredient] {
         if searchText.isEmpty {
             return Array(ingredients)
         }
@@ -41,66 +42,110 @@ struct IngredientsListView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                if ingredients.isEmpty {
-                    emptyIngredientsView
-                } else if filteredIngredients.isEmpty {
-                    emptySearchResultsView
-                } else {
-                    ingredientsList
-                }
-            }
-            .navigationTitle("Ingredients")
-            .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "Search ingredients")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            Text("Add")
+            ScrollViewReader { proxy in
+                ZStack(alignment: .bottom) {
+                    // Main content
+                    VStack(spacing: 0) {
+                        if filteredIngredients.isEmpty && !searchText.isEmpty {
+                            emptySearchResultsView
+                        } else if filteredIngredients.isEmpty {
+                            emptyIngredientsView
+                        } else {
+                            ingredientsList(proxy: proxy)
                         }
-                        .font(.headline)
-                            .foregroundColor(.orange)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(
-                            Capsule()
-                                .fill(Color.orange.opacity(0.1))
-                        )
-                        .contentShape(Capsule())
-                    }
-                    .accessibilityLabel("Add new ingredient")
-                    .buttonStyle(PressEffectButtonStyle())
-                }
-            }
-            .sheet(isPresented: $showingAddSheet) {
-                NavigationStack {
-                IngredientFormView(mode: .add)
-                }
-            }
-            .alert("Delete Ingredient", isPresented: $showingDeleteAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    if let ingredient = selectedIngredient {
-                        deleteIngredient(ingredient)
                     }
                 }
-            } message: {
-                Text("Are you sure you want to delete this ingredient? This action cannot be undone.")
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if ingredients.isEmpty {
-                        isEmptyStateFocused = true
-                    } else {
+                .onAppear {
+                    scrollViewProxy = proxy
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         isHeaderFocused = true
+                    }
+                }
+                .refreshable {
+                    await refresh()
+                }
+                .searchable(text: $searchText, prompt: "Search ingredients")
+                .navigationTitle("Ingredients")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        if filteredIngredients.count > 5 {
+                            Button {
+                                withAnimation {
+                                    if let firstIngredient = filteredIngredients.first {
+                                        scrollViewProxy?.scrollTo(getIngredientID(ingredient: firstIngredient), anchor: .top)
+                                    }
+                                }
+                            } label: {
+                                Label("Scroll to Top", systemImage: "arrow.up")
+                                    .labelStyle(.iconOnly)
+                                    .imageScale(.medium)
+                            }
+                            .accessibilityLabel("Scroll to top")
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                Text("Add")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color.orange.opacity(0.1))
+                            )
+                            .contentShape(Capsule())
+                        }
+                        .accessibilityLabel("Add new ingredient")
+                        .buttonStyle(PressEffectButtonStyle())
                     }
                 }
             }
         }
+        .sheet(isPresented: $showingAddSheet) {
+            NavigationStack {
+                IngredientFormView(mode: .add)
+            }
+        }
+        .sheet(item: $editingIngredient) { ingredient in
+            NavigationStack {
+                IngredientFormView(mode: .edit(ingredient))
+            }
+        }
+        .alert("Delete Ingredient", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let ingredient = selectedIngredient {
+                    deleteIngredient(ingredient)
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this ingredient? This action cannot be undone.")
+        }
+    }
+    
+    private func ingredientsList(proxy: ScrollViewProxy) -> some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(filteredIngredients) { ingredient in
+                    IngredientNavigationLink(ingredient: ingredient, onDelete: {
+                        selectedIngredient = ingredient
+                        showingDeleteAlert = true
+                    })
+                    .id(getIngredientID(ingredient: ingredient))
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 16)
+        }
+        .scrollIndicators(.visible)
     }
     
     // MARK: - Component Views
@@ -260,10 +305,24 @@ struct IngredientsListView: View {
     
     // MARK: - Helper Functions
     
+    private func getIngredientID(ingredient: Ingredient) -> String {
+        let objectID = ingredient.objectID.uriRepresentation().absoluteString
+        return objectID.isEmpty ? (ingredient.name ?? UUID().uuidString) : objectID
+    }
+    
     private func deleteIngredient(_ ingredient: Ingredient) {
         withAnimation {
             viewContext.delete(ingredient)
             try? viewContext.save()
+        }
+    }
+    
+    private func refresh() async {
+        do {
+            try await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+            viewContext.refreshAllObjects()
+        } catch {
+            print("Refresh task cancelled")
         }
     }
 }
@@ -331,6 +390,78 @@ struct PressEffectButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
+    }
+}
+
+// Create a new IngredientNavigationLink to match RecipeNavigationLink style
+struct IngredientNavigationLink: View {
+    let ingredient: Ingredient
+    let onDelete: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        NavigationLink {
+            IngredientDetailView(ingredient: ingredient)
+                .toolbar(.hidden, for: .tabBar)
+        } label: {
+            ingredientCard
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+    
+    private var ingredientCard: some View {
+        HStack(alignment: .center, spacing: 16) {
+            // Ingredient icon
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "leaf")
+                    .font(.system(size: 30))
+                    .foregroundColor(.orange)
+            }
+            
+            // Ingredient details
+            VStack(alignment: .leading, spacing: 6) {
+                Text(ingredient.name ?? "")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                if let description = ingredient.desc, !description.isEmpty {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                Label("\(ingredient.recipeIngredients?.count ?? 0) recipes", systemImage: "book")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.trailing, 4)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : .white)
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

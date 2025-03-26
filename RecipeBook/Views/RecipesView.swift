@@ -37,20 +37,14 @@ struct RecipesView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-                ZStack(alignment: .bottom) {
-                    // Main content
-                    VStack(spacing: 0) {
-                        if filteredRecipes.isEmpty && !searchText.isEmpty {
-                            emptySearchResultsView
-                        } else if filteredRecipes.isEmpty {
-                            emptyRecipesView
-                        } else {
-                            recipesList(proxy: proxy)
-                        }
+                VStack(spacing: 0) {
+                    if filteredRecipes.isEmpty && !searchText.isEmpty {
+                        emptySearchResultsView
+                    } else if filteredRecipes.isEmpty {
+                        emptyRecipesView
+                    } else {
+                        recipesList(proxy: proxy)
                     }
-                    
-                    // Floating action button for adding recipes
-                    floatingAddButton
                 }
                 .onAppear {
                     scrollViewProxy = proxy
@@ -82,20 +76,42 @@ struct RecipesView: View {
                             .accessibilityLabel("Scroll to top")
                         }
                     }
-                }
-                .sheet(isPresented: $showingAddSheet) {
-                    AddRecipeView()
-                }
-                .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
-                    Button("Cancel", role: .cancel) {}
-                    Button("Delete", role: .destructive) {
-                        if let recipe = selectedRecipe {
-                            deleteRecipe(recipe)
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                Text("Add")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color.orange.opacity(0.1))
+                            )
+                            .contentShape(Capsule())
                         }
+                        .accessibilityLabel("Add new recipe")
+                        .buttonStyle(PressEffectButtonStyle())
                     }
-                } message: {
-                    Text("Are you sure you want to delete this recipe? This action cannot be undone.")
                 }
+            }
+            .sheet(isPresented: $showingAddSheet) {
+                AddRecipeView()
+            }
+            .alert("Delete Recipe", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    if let recipe = selectedRecipe {
+                        deleteRecipe(recipe)
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to delete this recipe? This action cannot be undone.")
             }
         }
     }
@@ -193,22 +209,6 @@ struct RecipesView: View {
             Spacer()
         }
         .padding()
-    }
-    
-    private var floatingAddButton: some View {
-        Button {
-            showingAddSheet = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(Color.orange)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-        }
-        .padding(.bottom, 16)
-        .accessibilityLabel("Add Recipe")
     }
     
     // MARK: - Helper Functions

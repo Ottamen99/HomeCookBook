@@ -7,6 +7,7 @@ struct RecipeBooksGridView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingAddSheet = false
     @AccessibilityFocusState private var isEmptyStateFocused: Bool
+    @State private var searchText = ""
     
     @FetchRequest(
         entity: NSEntityDescription.entity(forEntityName: "RecipeBook", in: PersistenceController.shared.container.viewContext)!,
@@ -20,16 +21,30 @@ struct RecipeBooksGridView: View {
         return [GridItem(.adaptive(minimum: minWidth), spacing: 16)]
     }
     
+    // Add filtered recipe books computed property
+    private var filteredRecipeBooks: [NSManagedObject] {
+        if searchText.isEmpty {
+            return Array(recipeBooks)
+        }
+        return recipeBooks.filter { book in
+            guard let name = book.value(forKey: "name") as? String else { return false }
+            return name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
                 if recipeBooks.isEmpty {
                     emptyStateView
+                } else if filteredRecipeBooks.isEmpty && !searchText.isEmpty {
+                    emptySearchResultsView
                 } else {
                     recipeBooksGrid
                 }
             }
             .scrollIndicators(.visible)
+            .searchable(text: $searchText, prompt: "Search recipe books")
             .navigationTitle("Recipe Books")
             .toolbar {
                 if !recipeBooks.isEmpty {
@@ -37,13 +52,22 @@ struct RecipeBooksGridView: View {
                         Button {
                             showingAddSheet = true
                         } label: {
-                            Label("Add Recipe Book", systemImage: "plus.circle.fill")
-                                .labelStyle(.iconOnly)
-                                .font(.system(size: 22))
-                                .foregroundColor(.orange)
-                                .accessibilityLabel("Add Recipe Book")
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                Text("Add")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color.orange.opacity(0.1))
+                            )
+                            .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .accessibilityLabel("Add Recipe Book")
+                        .buttonStyle(PressEffectButtonStyle())
                     }
                 }
             }
@@ -110,7 +134,7 @@ struct RecipeBooksGridView: View {
     
     private var recipeBooksGrid: some View {
         LazyVGrid(columns: columns, spacing: dynamicTypeSize > .large ? 20 : 16) {
-            ForEach(recipeBooks, id: \.self) { book in
+            ForEach(filteredRecipeBooks, id: \.self) { book in
                 NavigationLink(destination: RecipeBookDetailView(recipeBook: book)) {
                     RecipeBookTile(recipeBook: book)
                         .accessibilityElement(children: .combine)
@@ -120,6 +144,47 @@ struct RecipeBooksGridView: View {
             }
         }
         .padding(16)
+    }
+    
+    // Add empty search results view
+    private var emptySearchResultsView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+                .frame(height: 40)
+            
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 60))
+                .foregroundColor(.gray)
+                .accessibilityHidden(true)
+            
+            Text("No Matching Recipe Books")
+                .font(.title2.bold())
+                .foregroundColor(.primary)
+            
+            Text("Try a different search term or create a new recipe book")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Button {
+                searchText = ""
+            } label: {
+                Text("Clear Search")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: 200)
+                    .background(Color.secondary.opacity(0.1))
+                    .foregroundColor(.primary)
+                    .cornerRadius(10)
+            }
+            .padding(.top, 8)
+            
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

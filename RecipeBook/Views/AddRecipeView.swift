@@ -22,6 +22,7 @@ struct AddRecipeView: View {
     @State private var difficulty: Difficulty = .medium
     @FocusState private var isNameFocused: Bool
     @FocusState private var isDescriptionFocused: Bool
+    @State private var steps: [RecipeStep] = []
     
     // MARK: - Body
     
@@ -37,22 +38,42 @@ struct AddRecipeView: View {
                 // Ingredients section
                 ingredientsSection
                 
-                // Add padding for the bottom button
-                Color.clear.frame(height: 80)
+                // Add the steps section
+                stepsSection
             }
             .padding(.top, 16)
             .padding(.horizontal, dynamicTypeSize > .large ? 12 : 16)
         }
         .scrollIndicators(.visible)
         .dismissKeyboardOnTap()
-        .overlay(alignment: .top) {
-            headerOverlay
-        }
-        .safeAreaInset(edge: .bottom) {
-            createRecipeButton
-        }
-        .navigationBarHidden(true)
+        .navigationTitle("New Recipe")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+            
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    saveRecipe()
+                    dismiss()
+                }
+                .bold()
+                .disabled(name.isEmpty || selectedIngredients.isEmpty)
+            }
+            
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        isNameFocused = false
+                        isDescriptionFocused = false
+                    }
+                }
+            }
+        }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .ingredients:
@@ -61,20 +82,36 @@ struct AddRecipeView: View {
                 }
             case .imagePicker:
                 ImagePicker(image: $image)
+            case .step(let stepSheet):
+                NavigationStack {
+                    switch stepSheet {
+                    case .add:
+                        StepFormView(
+                            step: nil,
+                            recipeIngredients: selectedIngredients
+                        ) { newStep in
+                            steps.append(newStep)
+                            updateStepOrder()
+                            activeSheet = nil
+                        }
+                    case .edit(let step):
+                        StepFormView(
+                            step: step,
+                            recipeIngredients: selectedIngredients
+                        ) { newStep in
+                            if let index = steps.firstIndex(where: { $0.id == step.id }) {
+                                steps[index] = newStep
+                            }
+                            updateStepOrder()
+                            activeSheet = nil
+                        }
+                    }
+                }
             }
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isNameFocused = true
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    isNameFocused = false
-                    isDescriptionFocused = false
-                }
             }
         }
     }
@@ -143,192 +180,194 @@ struct AddRecipeView: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             
-            // Stats row
-            statsRow
+            // New stats section
+            statsSection
         }
     }
     
-    private var statsRow: some View {
-        VStack(spacing: 16) {
-            // For larger dynamic type sizes, stack controls vertically
-            if dynamicTypeSize > .large {
-                VStack(spacing: 20) {
-                    timeControl
-                    servingsControl
-                    difficultyControl
-                }
-            } else {
-                HStack(spacing: 16) {
-                    timeControl
-                    Divider().frame(height: 40)
-                    servingsControl
-                    Divider().frame(height: 40)
-                    difficultyControl
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.vertical, 16)
-        .padding(.horizontal, dynamicTypeSize > .large ? 8 : 16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.secondarySystemBackground) : 
-                      Color(UIColor.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
-    }
-    
-    private var timeControl: some View {
-        VStack(spacing: 8) {
-            Text("Time")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(.secondary)
+    private var statsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section header
+            Label("Recipe Details", systemImage: "stopwatch")
+                .font(.headline)
+                .foregroundStyle(.primary)
             
+            // Stats container
+            VStack(spacing: 0) {
+                // Cooking time row
+                cookingTimeRow
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Servings row
+                servingsRow
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Difficulty row
+                difficultyRow
+            }
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+    
+    private var cookingTimeRow: some View {
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Cooking Time")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "clock")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
+            }
+            
+            Spacer()
+            
+            // Time stepper with fixed width for better alignment
             HStack(spacing: 8) {
-                Button(action: {
-                    if timeInMinutes > 5 {
-                        timeInMinutes -= 5
-                    }
-                }) {
-                    Image(systemName: "minus")
-                        .foregroundColor(timeInMinutes <= 5 ? .secondary : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(Color.secondary.opacity(0.1))
-                        )
-                }
-                .disabled(timeInMinutes <= 5)
-                .accessibilityLabel("Decrease cooking time")
+                Text(formatTime(timeInMinutes))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 65, alignment: .trailing)
+                    .monospacedDigit()
                 
-                VStack(spacing: 2) {
-                    Text("\(timeInMinutes)")
-                        .font(.headline)
-                        .minimumScaleFactor(0.8)
-                    Text("min")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(minWidth: 40)
-                .accessibilityLabel("\(timeInMinutes) minutes cooking time")
-                
-                Button(action: {
-                    if timeInMinutes < 480 {
-                        timeInMinutes += 5
-                    }
-                }) {
-                    Image(systemName: "plus")
-                        .foregroundColor(timeInMinutes >= 480 ? .secondary : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(Color.secondary.opacity(0.1))
-                        )
-                }
-                .disabled(timeInMinutes >= 480)
-                .accessibilityLabel("Increase cooking time")
-            }
-        }
-        .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
-    }
-    
-    private var servingsControl: some View {
-        VStack(spacing: 8) {
-            Text("Servings")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(.secondary)
-            
-            HStack(spacing: 8) {
-                Button(action: { 
-                    if servings > 1 {
-                        servings -= 1
-                    }
-                }) {
-                    Image(systemName: "minus")
-                        .foregroundColor(servings <= 1 ? .secondary : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(Color.secondary.opacity(0.1))
-                        )
-                }
-                .disabled(servings <= 1)
-                .accessibilityLabel("Decrease servings")
-                
-                VStack(spacing: 2) {
-                    Text("\(servings)")
-                        .font(.headline)
-                        .minimumScaleFactor(0.8)
-                    Text("serve")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(minWidth: 40)
-                .accessibilityLabel("\(servings) servings")
-                
-                Button(action: { 
-                    if servings < 20 {
-                        servings += 1
-                    }
-                }) {
-                    Image(systemName: "plus")
-                        .foregroundColor(servings >= 20 ? .secondary : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(Color.secondary.opacity(0.1))
-                        )
-                }
-                .disabled(servings >= 20)
-                .accessibilityLabel("Increase servings")
-            }
-        }
-        .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
-    }
-    
-    private var difficultyControl: some View {
-        VStack(spacing: 8) {
-            Text("Difficulty")
-                .font(.subheadline.weight(.medium))
-                .foregroundColor(.secondary)
-            
-            Menu {
-                Picker("Difficulty", selection: $difficulty) {
-                    ForEach(Difficulty.allCases, id: \.self) { level in
-                        Label {
-                            Text(level.rawValue)
-                        } icon: {
-                            Image(systemName: level.icon)
-                                .foregroundColor(level.color)
+                // Custom stepper buttons for better control
+                HStack(spacing: 0) {
+                    Button {
+                        if timeInMinutes > 5 {
+                            timeInMinutes -= 5
+                        } else if timeInMinutes > 1 {
+                            timeInMinutes = 1
                         }
-                        .tag(level)
+                    } label: {
+                        Image(systemName: "minus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(timeInMinutes <= 1)
+                    
+                    Button {
+                        if timeInMinutes < 480 {
+                            timeInMinutes += 5
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(timeInMinutes >= 480)
+                }
+                .foregroundStyle(.primary)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 54)
+    }
+    
+    private var servingsRow: some View {
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Servings")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "person.2")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
+            }
+            
+            Spacer()
+            
+            // Servings stepper with fixed width for better alignment
+            HStack(spacing: 8) {
+                Text("\(servings)")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 65, alignment: .trailing)
+                    .monospacedDigit()
+                
+                // Custom stepper buttons
+                HStack(spacing: 0) {
+                    Button {
+                        if servings > 1 {
+                            servings -= 1
+                        }
+                    } label: {
+                        Image(systemName: "minus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(servings <= 1)
+                    
+                    Button {
+                        if servings < 20 {
+                            servings += 1
+                        }
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .disabled(servings >= 20)
+                }
+                .foregroundStyle(.primary)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 54)
+    }
+    
+    private var difficultyRow: some View {
+        HStack(spacing: 12) {
+            // Icon and label
+            Label {
+                Text("Difficulty")
+                    .foregroundStyle(.primary)
+            } icon: {
+                Image(systemName: "gauge.medium")
+                    .foregroundStyle(.orange)
+                    .frame(width: 24)
+            }
+            
+            Spacer()
+            
+            // Difficulty picker
+            Menu {
+                ForEach(Difficulty.allCases, id: \.self) { level in
+                    Button {
+                        difficulty = level
+                    } label: {
+                        if difficulty == level {
+                            Label(level.rawValue.capitalized, systemImage: "checkmark")
+                        } else {
+                            Text(level.rawValue.capitalized)
+                        }
                     }
                 }
             } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: difficulty.icon)
-                        .font(.headline)
-                        .foregroundColor(difficulty.color)
-                        .frame(height: 24)
+                HStack(spacing: 8) {
+                    DifficultyPill(difficulty: difficulty)
+                        .frame(width: 120, alignment: .trailing)
                     
-                    Text(difficulty.rawValue)
+                    Image(systemName: "chevron.up.chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(.gray)
+                        .frame(width: 44, alignment: .leading)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.secondary.opacity(0.1))
-                )
-                .contentShape(Rectangle())
+                .frame(width: 164, alignment: .trailing)
             }
-            .accessibilityLabel("Select difficulty: \(difficulty.rawValue)")
-            .frame(maxWidth: dynamicTypeSize > .large ? .infinity : nil)
         }
+        .padding(.leading, 16)
+        .frame(height: 54)
     }
     
     private var descriptionSection: some View {
@@ -464,9 +503,6 @@ struct AddRecipeView: View {
                                 }
                                 .foregroundColor(.orange)
                                 .pickerStyle(.menu)
-                                .frame(maxWidth: 120)
-                                
-                                Spacer()
                             }
                         }
                     } else {
@@ -537,80 +573,127 @@ struct AddRecipeView: View {
         )
     }
     
-    private var headerOverlay: some View {
-        HStack {
-            // Back button
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark")
-                    .font(.headline)
+    // Add the steps section
+    private var stepsSection: some View {
+        VStack(alignment: .leading) {
+            // Header
+            HStack {
+                Label("Steps", systemImage: "list.number")
+                    .font(.title3.weight(.bold))
                     .foregroundColor(.primary)
-                    .frame(width: 44, height: 44) // 44pt minimum hit target
+                
+                Spacer()
+                
+                Button {
+                    activeSheet = .step(.add)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.orange)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
                     .background(
-                        Circle()
-                            .fill(colorScheme == .dark ? 
-                                  Color(UIColor.secondarySystemBackground) : 
-                                  Color(UIColor.systemBackground))
-                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                        Capsule()
+                            .fill(Color.orange.opacity(0.1))
                     )
+                }
             }
-            .accessibilityLabel("Cancel")
             
-            Spacer()
-            
-            Text("New Recipe")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            
-            Spacer()
-            
-            // Placeholder to balance the layout
-            Color.clear
-                .frame(width: 44, height: 44)
+            if steps.isEmpty {
+                emptyStepsView
+            } else {
+                stepsListView
+            }
         }
-        .padding(16)
+    }
+    
+    private var emptyStepsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "list.number.circle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange.opacity(0.5))
+                .padding(.top, 20)
+            
+            Text("No steps added yet")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Button {
+                activeSheet = .step(.add)
+            } label: {
+                Text("Add Steps")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(height: 44)
+                    .frame(maxWidth: 200)
+                    .background(Color.orange)
+                    .cornerRadius(10)
+            }
+            .padding(.bottom, 20)
+        }
+        .frame(maxWidth: .infinity)
         .background(
-            Rectangle()
+            RoundedRectangle(cornerRadius: 12)
                 .fill(colorScheme == .dark ? 
-                      Color(UIColor.systemBackground) : 
-                      Color.white)
+                      Color(UIColor.secondarySystemBackground) : 
+                      Color(UIColor.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
     }
     
-    private var createRecipeButton: some View {
-        Button(action: {
-            saveRecipe()
-            dismiss()
-        }) {
-            Text("Create Recipe")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54) // Taller button for better hit target
-                .background(
-                    name.isEmpty || selectedIngredients.isEmpty ? 
-                    Color.gray : Color.orange
-                )
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+    private var stepsListView: some View {
+        VStack(spacing: 8) {
+            ForEach(steps.indices, id: \.self) { index in
+                Button {
+                    activeSheet = .step(.edit(steps[index]))
+                } label: {
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("\(index + 1)")
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.orange))
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(steps[index].instructions)
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(4)
+                            
+                            if !steps[index].selectedIngredients.isEmpty {
+                                Text("Uses \(steps[index].selectedIngredients.count) ingredient(s)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Button {
+                activeSheet = .step(.add)
+            } label: {
+                Label("Add More Steps", systemImage: "plus")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .foregroundColor(.orange)
+                    .cornerRadius(8)
+            }
         }
-        .disabled(name.isEmpty || selectedIngredients.isEmpty)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(
-            Rectangle()
-                .fill(colorScheme == .dark ? 
-                      Color(UIColor.systemBackground) : 
-                      Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
-                .edgesIgnoringSafeArea(.bottom)
-        )
-        .accessibilityHint(name.isEmpty || selectedIngredients.isEmpty ? 
-                          "Disabled. Recipe name and ingredients are required." : 
-                          "Creates the recipe and saves it")
     }
     
     // MARK: - Helper Functions
@@ -643,7 +726,42 @@ struct AddRecipeView: View {
             recipeIngredient.unit = selected.unit.rawValue
         }
         
+        // Save steps
+        for step in steps {
+            let newStep = Step(context: viewContext)
+            newStep.recipe = recipe
+            newStep.instructions = step.instructions
+            newStep.order = step.order
+            newStep.createdAt = Date()
+            
+            // Link ingredients to step
+            for selectedIngredient in step.selectedIngredients {
+                if let ri = recipe.recipeIngredientsArray.first(where: { 
+                    $0.ingredient?.objectID == selectedIngredient.ingredient.objectID
+                }) {
+                    newStep.addToIngredients(ri)
+                }
+            }
+        }
+        
         try? viewContext.save()
+    }
+    
+    private func formatTime(_ minutes: Int16) -> String {
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        
+        if hours > 0 {
+            return "\(hours)h \(remainingMinutes)m"
+        } else {
+            return "\(remainingMinutes)m"
+        }
+    }
+    
+    private func updateStepOrder() {
+        for (index, _) in steps.enumerated() {
+            steps[index].order = Int16(index)
+        }
     }
 }
 
@@ -657,11 +775,13 @@ struct SelectedIngredient: Identifiable {
 enum AddRecipeSheet: Identifiable {
     case imagePicker
     case ingredients
+    case step(EditStepSheet)
     
-    var id: Int {
+    var id: String {
         switch self {
-        case .imagePicker: return 0
-        case .ingredients: return 1
+        case .imagePicker: return "imagePicker"
+        case .ingredients: return "ingredients"
+        case .step(let stepSheet): return "step-\(stepSheet.id)"
         }
     }
 }

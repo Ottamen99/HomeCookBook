@@ -667,7 +667,7 @@ struct RecipeStatsSection: View {
             // Difficulty picker
             Menu {
                 ForEach(Difficulty.allCases, id: \.self) { level in
-                    Button {
+            Button {
                         difficulty = level
                     } label: {
                         if difficulty == level {
@@ -730,8 +730,8 @@ struct IngredientsListSection: View {
                             Text(ingredient.ingredient.name ?? "")
                                         .font(.body)
                             }
-                            
-                            Spacer()
+                                    
+                                    Spacer()
                                     
                             HStack(spacing: 4) {
                                     TextField("Qty", value: $ingredient.quantity, format: .number)
@@ -744,9 +744,9 @@ struct IngredientsListSection: View {
                                         Text(unit.displayName).tag(unit)
                                     }
                                 }
+                                .foregroundColor(.orange)
                                 .pickerStyle(.menu)
                                 .labelsHidden()
-                                .foregroundColor(.orange)
                             }
                         }
                         .padding()
@@ -860,7 +860,7 @@ struct RecipeStepsSection: View {
             .font(.system(.headline, design: .rounded))
             .foregroundColor(.white)
             .frame(width: 28, height: 28)
-            .background(Circle().fill(Color.accentColor))
+            .background(Circle().fill(Color.orange))
     }
     
     // Step content (instructions and ingredients count)

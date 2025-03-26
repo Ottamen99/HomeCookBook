@@ -325,13 +325,13 @@ struct RecipeDetailView: View {
     }
     
     private var stepsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 24) {
             Text("Instructions")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
+                .font(.title3.bold())
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
             
-            VStack(spacing: 24) { // Increased spacing between steps
+            VStack(spacing: 16) {
                 ForEach(recipe.stepsArray) { step in
                     stepView(step)
                 }
@@ -341,54 +341,78 @@ struct RecipeDetailView: View {
     
     private func stepView(_ step: Step) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Step header
+            // Step header with improved layout
             HStack(alignment: .center, spacing: 16) {
+                // Step number circle - maintains 44pt minimum tap target
                 ZStack {
                     Circle()
                         .fill(Color.orange.opacity(0.2))
-                        .frame(width: 44, height: 44) // 44pt minimum hit target
+                        .frame(width: 44, height: 44)
                     
                     Text("\(step.order + 1)")
                         .font(.headline)
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                 }
+                .accessibilityHidden(true)
                 
                 Text("Step \(step.order + 1)")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.primary)
+                
+                Spacer()
             }
             
-            // Instructions
+            // Instructions with proper text spacing
             Text(step.instructions ?? "")
                 .font(.body)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(6) // Improved line spacing
-                .padding(.leading, 60) // Align with step number
+                .lineSpacing(6)
+                .padding(.horizontal, 4)
             
-            // Used ingredients
+            // Ingredients used in step
             if let ingredients = step.ingredients as? Set<RecipeIngredient>, !ingredients.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "leaf.fill")
-                        .font(.subheadline)
-                        .foregroundColor(.orange)
-                    
-                    Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 16)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(10)
-                .padding(.leading, 60) // Align with step number
+                ingredientsUsedView(ingredients)
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color.white)
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                .fill(.regularMaterial)
+                .shadow(
+                    color: Color.black.opacity(0.05),
+                    radius: 8,
+                    x: 0,
+                    y: 2
+                )
+        )
+    }
+    
+    // Add this helper view for ingredients used in step
+    private func ingredientsUsedView(_ ingredients: Set<RecipeIngredient>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "leaf.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+                    .symbolRenderingMode(.hierarchical)
+                
+                Text("Ingredients used:")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+            }
+            
+            Text(ingredients.compactMap { $0.ingredient?.name }.joined(separator: ", "))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineSpacing(4)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.orange.opacity(0.1))
         )
     }
     

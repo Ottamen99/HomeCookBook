@@ -30,22 +30,22 @@ A beautiful and intuitive iOS app for managing your recipes and organizing them 
 - Dark mode support
 - Native iOS feel
 
-## Coming in v0.4
+### 🥫 Pantry Management
+- Keep track of ingredients you have in your pantry
+- See which recipes you can make with your current ingredients
+- Quickly identify recipes where you're only missing a few items
 
-The Recipe Books update introduces a new way to organize your recipes:
-
-- **Recipe Books Grid**: Browse your recipe collections in a beautiful grid layout
-- **Custom Collections**: Create recipe books with names and descriptions
-- **Flexible Organization**: Add recipes to multiple books
-- **Quick Management**: Easy adding/removing of recipes from books
-- **Smart Details**: See recipe counts, creation dates, and more for each book
-- **Seamless Integration**: Fully integrated with existing recipe management
+### 🍳 Interactive Cooking Mode
+- Step-by-step guidance through recipes
+- Mark steps as complete as you go
+- View ingredients needed for the current step
+- Integrated timers for cooking steps (Widget support)
 
 ## Requirements
 
-- iOS 16.0+
-- Xcode 15.0+
-- Swift 5.9+
+- iOS 17.6+
+- Xcode 16.2+
+- Swift 5.0
 
 ## Installation
 

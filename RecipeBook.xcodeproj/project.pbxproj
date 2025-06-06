@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		E276C19C2D5BF4980047833E /* RecipeBookKit in Frameworks */ = {isa = PBXBuildFile; productRef = E276C19B2D5BF4980047833E /* RecipeBookKit */; };
 		E28E2A6B2D5BEB3C00FC5BE9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BE9 /* WidgetKit.framework */; };
+		E28E2A6B2D5BEB3C00FC5BEF /* RecipeBookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BEF /* RecipeBookTests.swift */; };
+		E28E2A6B2D5BEB3C00FC5BF0 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BF0 /* XCTest.framework */; };
+		E28E2A6B2D5BEB3C00FC5BF1 /* TestCoreDataStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BF1 /* TestCoreDataStack.swift */; };
+		E28E2A6B2D5BEB3C00FC5BF2 /* RecipeViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BF2 /* RecipeViewModelTests.swift */; };
+		E28E2A6B2D5BEB3C00FC5BF3 /* PantryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28E2A692D5BEB3800FC5BF3 /* PantryViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +33,12 @@
 		E28E27542D5BB7E800FC5BE9 /* RecipeBook.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecipeBook.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E28E2A692D5BEB3800FC5BE9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E28E2A742D5BEB8F00FC5BE9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		E28E27542D5BB7E800FC5BEF /* RecipeBookTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RecipeBookTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E28E2A692D5BEB3800FC5BEF /* RecipeBookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipeBookTests.swift; path = RecipeBookTests/RecipeBookTests.swift; sourceTree = "<group>"; };
+		E28E2A692D5BEB3800FC5BF0 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		E28E2A692D5BEB3800FC5BF1 /* TestCoreDataStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestCoreDataStack.swift; path = RecipeBookTests/TestCoreDataStack.swift; sourceTree = "<group>"; };
+		E28E2A692D5BEB3800FC5BF2 /* RecipeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecipeViewModelTests.swift; path = RecipeBookTests/RecipeViewModelTests.swift; sourceTree = "<group>"; };
+		E28E2A692D5BEB3800FC5BF3 /* PantryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PantryViewModelTests.swift; path = RecipeBookTests/PantryViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -53,6 +64,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E28E27512D5BB7E800FC5BEF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E28E2A6B2D5BEB3C00FC5BF0 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -63,7 +82,20 @@
 				E28E2A762D5BEB8F00FC5BE9 /* RecipeTimerWidget */,
 				E28E2A682D5BEB3800FC5BE9 /* Frameworks */,
 				E28E27552D5BB7E800FC5BE9 /* Products */,
+				E28E274B2D5BB7E800FC5BEF /* RecipeBookTests */,
 			);
+			sourceTree = "<group>";
+		};
+		E28E274B2D5BB7E800FC5BEF /* RecipeBookTests */ = {
+			isa = PBXGroup;
+			children = (
+				E28E2A692D5BEB3800FC5BEF /* RecipeBookTests.swift */,
+				E28E2A692D5BEB3800FC5BF1 /* TestCoreDataStack.swift */,
+				E28E2A692D5BEB3800FC5BF2 /* RecipeViewModelTests.swift */,
+				E28E2A692D5BEB3800FC5BF3 /* PantryViewModelTests.swift */,
+			);
+			path = RecipeBookTests;
+			name = RecipeBookTests;
 			sourceTree = "<group>";
 		};
 		E28E27552D5BB7E800FC5BE9 /* Products */ = {
@@ -110,6 +142,23 @@
 			productReference = E28E27542D5BB7E800FC5BE9 /* RecipeBook.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E28E27532D5BB7E800FC5BEF /* RecipeBookTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E28E27672D5BB7EA00FC5BEF /* Build configuration list for PBXNativeTarget "RecipeBookTests" */;
+			buildPhases = (
+				E28E27502D5BB7E800FC5BEF /* Sources */,
+				E28E27512D5BB7E800FC5BEF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				{isa = PBXTargetDependency; target = E28E27532D5BB7E800FC5BE9 /* RecipeBook */; }
+			);
+			name = RecipeBookTests;
+			productName = RecipeBookTests;
+			productReference = E28E27542D5BB7E800FC5BEF /* RecipeBookTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -143,6 +192,7 @@
 			projectRoot = "";
 			targets = (
 				E28E27532D5BB7E800FC5BE9 /* RecipeBook */,
+				E28E27532D5BB7E800FC5BEF /* RecipeBookTests */,
 			);
 		};
 /* End PBXProject section */
@@ -162,6 +212,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E28E27502D5BB7E800FC5BEF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E28E2A6B2D5BEB3C00FC5BEF /* RecipeBookTests.swift in Sources */,
+				E28E2A6B2D5BEB3C00FC5BF1 /* TestCoreDataStack.swift in Sources */,
+				E28E2A6B2D5BEB3C00FC5BF2 /* RecipeViewModelTests.swift in Sources */,
+				E28E2A6B2D5BEB3C00FC5BF3 /* PantryViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +289,23 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		E28E27682D5BB7EA00FC5BEF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BNVRXY5UB;
+				IPHONEOS_DEPLOYMENT_TARGET = "17.6";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ottaviobuonomo.RecipeBookTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SWIFT_VERSION = "5.0";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RecipeBook.app/RecipeBook";
 			};
 			name = Debug;
 		};
@@ -368,6 +446,23 @@
 			};
 			name = Release;
 		};
+		E28E27692D5BB7EA00FC5BEF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6BNVRXY5UB;
+				IPHONEOS_DEPLOYMENT_TARGET = "17.6";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ottaviobuonomo.RecipeBookTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				SWIFT_VERSION = "5.0";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RecipeBook.app/RecipeBook";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -376,6 +471,15 @@
 			buildConfigurations = (
 				E28E27652D5BB7EA00FC5BE9 /* Debug */,
 				E28E27662D5BB7EA00FC5BE9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E28E27672D5BB7EA00FC5BEF /* Build configuration list for PBXNativeTarget "RecipeBookTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E28E27682D5BB7EA00FC5BEF /* Debug */,
+				E28E27692D5BB7EA00FC5BEF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

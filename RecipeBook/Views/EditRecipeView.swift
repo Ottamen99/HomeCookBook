@@ -230,6 +230,7 @@ struct EditRecipeView: View {
                             dismiss()
                         }
                     }
+                    .accessibilityIdentifier("editRecipe_cancel_button")
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -245,6 +246,7 @@ struct EditRecipeView: View {
                     }
                     .bold()
                     .disabled(viewModel.name.isEmpty || viewModel.selectedIngredients.isEmpty)
+                    .accessibilityIdentifier("editRecipe_save_button")
                 }
                 
                 ToolbarItem(placement: .keyboard) {
@@ -253,6 +255,7 @@ struct EditRecipeView: View {
                         Button("Done") {
                             focusedField = nil
                         }
+                        .accessibilityIdentifier("editRecipe_keyboardDone_button")
                     }
                 }
             }
@@ -295,6 +298,7 @@ struct FormContent: View {
                         .padding(4)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color(.systemGray6)))
                         .focused(focusedNameBinding, equals: .description)
+                        .accessibilityIdentifier("editRecipe_description_texteditor")
                 }
                 .padding(.horizontal)
                 
@@ -330,6 +334,7 @@ struct FormContent: View {
                             .background(Color.red.opacity(0.1))
                             .cornerRadius(8)
                     }
+                    .accessibilityIdentifier("editRecipe_delete_button")
                     .padding(.horizontal)
                 }
                 
@@ -362,12 +367,14 @@ extension View {
         self
             .alert("Delete Recipe", isPresented: showingDeleteAlert) {
                 Button("Cancel", role: .cancel) {}
+                .accessibilityIdentifier("deleteRecipeAlert_cancel_button")
                 Button("Delete", role: .destructive) {
                     if viewModel.deleteRecipe(viewContext: viewContext) {
                         dismiss()
                         rootDismiss.wrappedValue = true
                     }
                 }
+                .accessibilityIdentifier("deleteRecipeAlert_delete_button")
             } message: {
                 Text("Are you sure you want to delete this recipe? This action cannot be undone.")
             }
@@ -375,7 +382,9 @@ extension View {
                 Button("Discard Changes", role: .destructive) {
                     dismiss()
                 }
+                .accessibilityIdentifier("unsavedChangesAlert_discard_button")
                 Button("Keep Editing", role: .cancel) {}
+                .accessibilityIdentifier("unsavedChangesAlert_keepEditing_button")
             } message: {
                 Text("You have unsaved changes. Are you sure you want to discard them?")
             }
@@ -481,10 +490,13 @@ struct ImageNameSection: View {
                             .shadow(radius: 3)
                             .padding(8)
                     }
+                    .accessibilityIdentifier("editRecipe_editImage_button")
                 }
                 .onTapGesture {
                     onImageTap()
                 }
+                .accessibilityElement(children: .combine) // Combine children for tap gesture
+                .accessibilityIdentifier("editRecipe_image_container")
                 
                 // Recipe name field
                 TextField("Recipe Name", text: $name)
@@ -492,6 +504,7 @@ struct ImageNameSection: View {
                     .multilineTextAlignment(.center)
                     .padding(.vertical, 8)
                     .focused(focusedFieldBinding, equals: .name)
+                    .accessibilityIdentifier("editRecipe_name_textfield")
             }
             .listRowInsets(EdgeInsets())
             .padding(.horizontal)
@@ -558,6 +571,7 @@ struct RecipeStatsSection: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 65, alignment: .trailing)
                     .monospacedDigit()
+                    .accessibilityIdentifier("editRecipe_time_text")
                 
                 // Custom stepper buttons for better control
                 HStack(spacing: 0) {
@@ -571,6 +585,7 @@ struct RecipeStatsSection: View {
                         Image(systemName: "minus")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityIdentifier("editRecipe_time_minus_button")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .disabled(timeInMinutes <= 1)
@@ -583,6 +598,7 @@ struct RecipeStatsSection: View {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityIdentifier("editRecipe_time_plus_button")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .disabled(timeInMinutes >= 480)
@@ -615,6 +631,7 @@ struct RecipeStatsSection: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 65, alignment: .trailing)
                     .monospacedDigit()
+                    .accessibilityIdentifier("editRecipe_servings_text")
                 
                 // Custom stepper buttons
                 HStack(spacing: 0) {
@@ -626,6 +643,7 @@ struct RecipeStatsSection: View {
                         Image(systemName: "minus")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityIdentifier("editRecipe_servings_minus_button")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .disabled(servings <= 1)
@@ -638,6 +656,7 @@ struct RecipeStatsSection: View {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityIdentifier("editRecipe_servings_plus_button")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .disabled(servings >= 20)
@@ -667,7 +686,7 @@ struct RecipeStatsSection: View {
             // Difficulty picker
             Menu {
                 ForEach(Difficulty.allCases, id: \.self) { level in
-            Button {
+                    Button {
                         difficulty = level
                     } label: {
                         if difficulty == level {
@@ -676,6 +695,7 @@ struct RecipeStatsSection: View {
                             Text(level.rawValue.capitalized)
                         }
                     }
+                    .accessibilityIdentifier("editRecipe_difficulty_option_\(level.rawValue)")
                 }
             } label: {
                 HStack(spacing: 8) {
@@ -689,6 +709,7 @@ struct RecipeStatsSection: View {
                 }
                 .frame(width: 164, alignment: .trailing)
             }
+            .accessibilityIdentifier("editRecipe_difficulty_menu")
         }
         .padding(.leading, 16)
         .frame(height: 54)
@@ -721,10 +742,11 @@ struct IngredientsListSection: View {
                     .foregroundColor(Color.orange)
                     .cornerRadius(8)
                 }
+                .accessibilityIdentifier("editRecipe_addIngredients_empty_button")
                 .padding(.horizontal)
                         } else {
                 VStack(spacing: 8) {
-                    ForEach($ingredients) { $ingredient in
+                    ForEach($ingredients) { $ingredient in // Assuming SelectedIngredient is Identifiable with 'id'
                         HStack(spacing: 16) {
                             VStack(alignment: .leading, spacing: 4) {
                             Text(ingredient.ingredient.name ?? "")
@@ -738,6 +760,7 @@ struct IngredientsListSection: View {
                                     .keyboardType(.decimalPad)
                                         .multilineTextAlignment(.trailing)
                                     .frame(width: 50)
+                                    .accessibilityIdentifier("editRecipe_ingredientQuantity_textfield_\($ingredient.id.uuidString)")
                                     
                                 Picker("Unit", selection: $ingredient.unit) {
                                     ForEach(UnitOfMeasure.allCases, id: \.self) { unit in
@@ -747,11 +770,14 @@ struct IngredientsListSection: View {
                                 .foregroundColor(.orange)
                                 .pickerStyle(.menu)
                                 .labelsHidden()
+                                .accessibilityIdentifier("editRecipe_ingredientUnit_picker_\($ingredient.id.uuidString)")
                             }
                         }
                         .padding()
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("editRecipe_ingredientRow_\($ingredient.id.uuidString)")
                     }
                     
                             Button {
@@ -764,6 +790,7 @@ struct IngredientsListSection: View {
                             .foregroundColor(Color.orange)
                             .cornerRadius(8)
                     }
+                    .accessibilityIdentifier("editRecipe_addMoreIngredients_button")
                 }
                 .padding(.horizontal)
             }
@@ -811,6 +838,7 @@ struct RecipeStepsSection: View {
             .foregroundColor(Color.orange)
             .cornerRadius(8)
         }
+                .accessibilityIdentifier("editRecipe_addSteps_empty_button")
         .padding(.horizontal)
     }
     
@@ -852,6 +880,7 @@ struct RecipeStepsSection: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(8)
+        .accessibilityIdentifier("editRecipe_stepRow_\(steps[index].id.uuidString)")
     }
     
     // Step number circle
@@ -897,6 +926,7 @@ struct RecipeStepsSection: View {
                 .foregroundColor(Color.orange)
                 .cornerRadius(8)
         }
+        .accessibilityIdentifier("editRecipe_addMoreSteps_button")
     }
 }
 

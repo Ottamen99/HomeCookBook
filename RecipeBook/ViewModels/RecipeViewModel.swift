@@ -3,6 +3,7 @@ import CoreData
 
 class RecipeViewModel: ObservableObject {
     let viewContext: NSManagedObjectContext
+    @Published var lastAddedRecipe: Recipe?
     
     init(viewContext: NSManagedObjectContext) {
         self.viewContext = viewContext
@@ -15,6 +16,7 @@ class RecipeViewModel: ObservableObject {
         recipe.timeInMinutes = timeInMinutes
         recipe.servings = servings
         
+        lastAddedRecipe = recipe
         save()
     }
     

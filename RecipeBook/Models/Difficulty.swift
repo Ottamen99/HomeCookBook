@@ -1,9 +1,9 @@
-import SwiftUICore
+import SwiftUI
 
 enum Difficulty: String, CaseIterable {
-    case easy = "Easy"
-    case medium = "Medium"
-    case hard = "Hard"
+    case easy = "easy"
+    case medium = "medium"
+    case hard = "hard"
     
     var icon: String {
         switch self {

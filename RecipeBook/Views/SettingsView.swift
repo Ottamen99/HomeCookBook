@@ -59,6 +59,22 @@ struct SettingsView: View {
                 } header: {
                     Text("SUPPORT")
                 }
+                
+                Section {
+                    NavigationLink {
+                        RecipeStatsView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundColor(.orange)
+                                .imageScale(.large)
+                            Text("Recipe Statistics")
+                                .foregroundColor(.primary)
+                        }
+                    }
+                } header: {
+                    Text("STATS")
+                }
             }
             .navigationTitle("Settings")
             .alert("Contact Support", isPresented: $showingEmailAlert) {
@@ -66,8 +82,8 @@ struct SettingsView: View {
             } message: {
                 Text("Please send an email to:\n\(supportEmail)")
             }
+            .tint(.orange)
         }
-        .accentColor(.orange)
     }
 }
 

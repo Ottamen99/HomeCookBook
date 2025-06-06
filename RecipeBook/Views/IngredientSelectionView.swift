@@ -19,113 +19,163 @@ struct IngredientSelectionView: View {
         return ingredients.filter { ($0.name ?? "").localizedCaseInsensitiveContains(searchText) }
     }
     
-    private var toolbarButtons: some View {
-        HStack {
-            Button(action: { dismiss() }) {
-                Image(systemName: "chevron.left")
-                    .foregroundColor(.black)
-                    .padding()
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: .black.opacity(0.1), radius: 5)
-            }
-            
-            Spacer()
-            
-            Button {
-                dismiss()
-            } label: {
-                Text("Done")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.orange)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .shadow(color: .black.opacity(0.1), radius: 5)
-            }
-        }
-        .padding(.horizontal)
-    }
-    
     var body: some View {
-        ZStack(alignment: .top) {
+        NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    // Search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        
-                        TextField("Search ingredients", text: $searchText)
-                            .textFieldStyle(.plain)
-                    }
-                    .padding(12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .padding(.top, 80)
+                LazyVStack(spacing: 16) {
                     
                     // Ingredients grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 12) {
-                        ForEach(filteredIngredients) { ingredient in
-                            let isSelected = selectedIngredients.contains { $0.ingredient == ingredient }
-                            
-                            Button {
-                                toggleIngredient(ingredient)
-                            } label: {
-                                VStack(spacing: 12) {
-                                    Circle()
-                                        .fill(isSelected ? Color.orange.opacity(0.1) : Color.gray.opacity(0.1))
-                                        .frame(width: 60, height: 60)
-                                        .overlay {
-                                            Image(systemName: "leaf.fill")
-                                                .foregroundColor(isSelected ? .orange : .gray)
-                                                .font(.system(size: 24))
-                                        }
-                                    
-                                    Text(ingredient.name ?? "")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(isSelected ? .orange : .gray)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isSelected ? Color.orange.opacity(0.2) : Color.gray.opacity(0.2), lineWidth: 1)
-                                )
-                            }
-                        }
+                    ingredientsGrid
+                        .padding(.horizontal)
+                }
+                .padding(.vertical)
+            }
+            .navigationTitle("Select Ingredients")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
                     }
-                    .padding()
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        saveWithHaptics()
+                    }
+                    .fontWeight(.semibold)
                 }
             }
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer,
+                prompt: "Search ingredients"
+            )
+        }
+    }
+    
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
             
-            // Overlay toolbar at top
-            VStack {
-                toolbarButtons
-                    .padding(.top, 8)
-                
-                Spacer()
+            TextField("Search ingredients", text: $searchText)
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+        }
+        .padding(12)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+    
+    private var ingredientsGrid: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ],
+            spacing: 12
+        ) {
+            ForEach(filteredIngredients) { ingredient in
+                IngredientCell(
+                    ingredient: ingredient,
+                    isSelected: selectedIngredients.contains { $0.ingredient == ingredient },
+                    onTap: { toggleIngredient(ingredient) }
+                )
             }
         }
-        .navigationBarHidden(true)
     }
     
     private func toggleIngredient(_ ingredient: Ingredient) {
-        if let index = selectedIngredients.firstIndex(where: { $0.ingredient == ingredient }) {
-            selectedIngredients.remove(at: index)
-        } else {
-            selectedIngredients.append(SelectedIngredient(
-                ingredient: ingredient,
-                quantity: 1,
-                unit: .grams
-            ))
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        
+        withAnimation(.spring(response: 0.3)) {
+            if let index = selectedIngredients.firstIndex(where: { $0.ingredient == ingredient }) {
+                selectedIngredients.remove(at: index)
+            } else {
+                selectedIngredients.append(SelectedIngredient(
+                    ingredient: ingredient,
+                    quantity: 1,
+                    unit: .grams
+                ))
+            }
         }
+        
+        generator.impactOccurred()
+    }
+    
+    private func saveWithHaptics() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        dismiss()
+    }
+}
+
+// MARK: - IngredientCell
+private struct IngredientCell: View {
+    let ingredient: Ingredient
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            cellContent
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(ingredient.name ?? "")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+    
+    private var cellContent: some View {
+        VStack(spacing: 12) {
+            ingredientIcon
+            ingredientName
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .background(cellBackground)
+        .overlay(cellBorder)
+    }
+    
+    private var ingredientIcon: some View {
+        Circle()
+            .fill(isSelected ? Color.orange.opacity(0.1) : .secondary.opacity(0.1))
+            .frame(width: 60, height: 60)
+            .overlay(iconImage)
+    }
+    
+    private var iconImage: some View {
+        Image(systemName: "leaf.fill")
+            .font(.system(size: 24))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundColor(isSelected ? .orange : .secondary)
+    }
+    
+    private var ingredientName: some View {
+        Text(ingredient.name ?? "")
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(isSelected ? .orange : .primary)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+    }
+    
+    private var cellBackground: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(.regularMaterial)
+    }
+    
+    private var cellBorder: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .strokeBorder(isSelected ? Color.orange.opacity(0.3) : .clear, lineWidth: 1)
+    }
+}
+
+#Preview {
+    NavigationStack {
+        IngredientSelectionView(selectedIngredients: .constant([]))
+            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 } 
